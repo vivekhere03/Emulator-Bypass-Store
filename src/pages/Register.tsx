@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Mail, Lock, User } from "lucide-react";
+import { Shield, Mail, Lock, User, AtSign } from "lucide-react";
 import { toast } from "sonner";
 
 const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -22,22 +23,52 @@ const Register = () => {
       toast.error("Password must be at least 6 characters");
       return;
     }
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      toast.error("Username must be 3-20 characters (letters, numbers, underscores only)");
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+
+    // Check if username is taken
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", username.toLowerCase())
+      .maybeSingle();
+
+    if (existing) {
+      toast.error("Username is already taken");
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { display_name: displayName },
+        data: { display_name: displayName, username: username.toLowerCase() },
         emailRedirectTo: window.location.origin,
       },
     });
-    setLoading(false);
+
     if (error) {
       toast.error(error.message);
-    } else {
-      toast.success("Account created! Welcome aboard!");
-      navigate("/");
+      setLoading(false);
+      return;
     }
+
+    // Update the profile with username
+    if (data.user) {
+      await supabase
+        .from("profiles")
+        .update({ username: username.toLowerCase() })
+        .eq("user_id", data.user.id);
+    }
+
+    setLoading(false);
+    toast.success("Account created! Welcome aboard!");
+    navigate("/");
   };
 
   return (
@@ -62,6 +93,22 @@ const Register = () => {
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="pl-10"
                     required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    placeholder="your_username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    className="pl-10"
+                    required
+                    minLength={3}
+                    maxLength={20}
                   />
                 </div>
               </div>
