@@ -274,6 +274,33 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "reduce-user": {
+        const { username, duration_days } = body;
+        if (!username?.trim()) {
+          return new Response(JSON.stringify({ error: "Username is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const data = await bypassRequest("/api/service/users/reduce", {
+          username: username.trim().toLowerCase(),
+          duration_days: duration_days || 7,
+          seller_id: seller.id,
+        });
+
+        await adminClient.from("api_usage_logs").insert({
+          seller_id: seller.id,
+          endpoint: "reduce-user",
+          credits_used: 0,
+          request_body: { username, duration_days },
+          response_status: 200,
+        });
+
+        result = data;
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Unknown action" }), {
           status: 400,
