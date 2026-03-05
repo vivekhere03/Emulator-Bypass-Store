@@ -318,9 +318,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (seller) {
+        const newBalance = (seller.credit_balance || 0) + credits;
         await adminClient
           .from("sellers")
-          .update({ credit_balance: (seller.credit_balance || 0) + credits })
+          .update({ credit_balance: newBalance })
           .eq("id", sellerId);
 
         await adminClient.from("credit_transactions").insert({
@@ -330,6 +331,34 @@ Deno.serve(async (req) => {
           description: `Purchased ${credits} credits (${invoiceData.package_name})`,
           order_id: order_id,
         });
+
+        // Sync credits to bypass server API key (if seller has one)
+        const { data: sellerFull } = await adminClient
+          .from("sellers")
+          .select("api_key_hash")
+          .eq("id", sellerId)
+          .single();
+
+        if (sellerFull?.api_key_hash) {
+          const SERVICE_KEY = Deno.env.get("BYPASS_SERVICE_KEY");
+          if (SERVICE_KEY) {
+            try {
+              await fetch(`https://bypass.cgxhub.in/api/service/keys/add-credits`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Service-Key": SERVICE_KEY,
+                },
+                body: JSON.stringify({
+                  seller_id: sellerId,
+                  credits: credits,
+                }),
+              });
+            } catch (e) {
+              console.error("Failed to sync credits to bypass server:", e);
+            }
+          }
+        }
       }
 
       return new Response(

@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
           seller_id: seller.id,
         });
 
-        // Deduct credit
+        // Deduct credit on portal
         await adminClient
           .from("sellers")
           .update({ credit_balance: seller.credit_balance - 1 })
@@ -139,6 +139,17 @@ Deno.serve(async (req) => {
           type: "add_user",
           description: `Added user: ${username.trim().toLowerCase()}`,
         });
+
+        // Sync deduction to bypass server API key
+        if (seller.api_key_hash) {
+          try {
+            await fetch(`${BYPASS_URL}/api/service/keys/deduct-credits`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY },
+              body: JSON.stringify({ seller_id: seller.id, credits: 1 }),
+            });
+          } catch (_) { /* non-critical */ }
+        }
 
         // Log API usage
         await adminClient.from("api_usage_logs").insert({
@@ -186,6 +197,17 @@ Deno.serve(async (req) => {
           type: "extend_user",
           description: `Extended user: ${username.trim().toLowerCase()} by ${duration_days || 7} days`,
         });
+
+        // Sync deduction to bypass server API key
+        if (seller.api_key_hash) {
+          try {
+            await fetch(`${BYPASS_URL}/api/service/keys/deduct-credits`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY },
+              body: JSON.stringify({ seller_id: seller.id, credits: 1 }),
+            });
+          } catch (_) { /* non-critical */ }
+        }
 
         await adminClient.from("api_usage_logs").insert({
           seller_id: seller.id,
