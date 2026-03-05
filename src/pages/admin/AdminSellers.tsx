@@ -146,7 +146,12 @@ const AdminSellers = () => {
   return (
     <DashboardLayout section="admin">
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Sellers</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Sellers</h1>
+          <Button onClick={() => setAddSellerDialog(true)}>
+            <UserPlus className="mr-2 h-4 w-4" /> Add Seller
+          </Button>
+        </div>
 
         {/* Pending Approvals */}
         {pendingSellers.length > 0 && (
