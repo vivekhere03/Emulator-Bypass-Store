@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Shield, ShoppingBag, User, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { Shield, ShoppingBag, User, LogOut, LayoutDashboard, Menu, X, Coins } from "lucide-react";
 import { useState } from "react";
 
 const Navbar = () => {
@@ -32,6 +32,11 @@ const Navbar = () => {
 
           {user ? (
             <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/buy-credits">
+                  <Coins className="mr-1.5 h-4 w-4" /> Buy Credits
+                </Link>
+              </Button>
               {isSeller && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/seller">
@@ -86,6 +91,9 @@ const Navbar = () => {
           </Button>
           {user ? (
             <>
+              <Button variant="ghost" size="sm" asChild onClick={() => setMobileOpen(false)}>
+                <Link to="/buy-credits">Buy Credits</Link>
+              </Button>
               {isSeller && (
                 <Button variant="ghost" size="sm" asChild onClick={() => setMobileOpen(false)}>
                   <Link to="/seller">Seller Panel</Link>

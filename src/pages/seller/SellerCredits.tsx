@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CreditCard, Zap, Coins, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -31,7 +30,7 @@ const SellerCredits = () => {
           .from("sellers")
           .select("*")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
         setSeller(s);
       }
     };
@@ -39,13 +38,29 @@ const SellerCredits = () => {
   }, [user]);
 
   const handlePurchase = async (pkg: any) => {
-    if (!user || !seller) {
+    if (!user) {
       toast.error("Please sign in first");
       return;
     }
 
     setPurchasing(pkg.id);
     try {
+      // Auto-create seller record if user doesn't have one yet
+      let sellerId = seller?.id;
+      if (!sellerId) {
+        const { data: newSeller, error: sellerErr } = await supabase
+          .from("sellers")
+          .insert({ user_id: user.id, status: "active" })
+          .select()
+          .single();
+        if (sellerErr) throw sellerErr;
+        sellerId = newSeller.id;
+        setSeller(newSeller);
+
+        // Auto-assign seller role
+        await supabase.from("user_roles").insert({ user_id: user.id, role: "seller" });
+      }
+
       const { data: order, error } = await supabase
         .from("orders")
         .insert({
@@ -57,7 +72,7 @@ const SellerCredits = () => {
             package_id: pkg.id,
             package_name: pkg.name,
             credits: pkg.credits,
-            seller_id: seller.id,
+            seller_id: sellerId,
           },
         })
         .select()
@@ -73,15 +88,15 @@ const SellerCredits = () => {
 
   const creditBalance = seller?.credit_balance ?? 0;
   const isLowCredits = creditBalance > 0 && creditBalance <= 5;
-  const isNoCredits = creditBalance === 0;
+  const isNoCredits = seller && creditBalance === 0;
 
   return (
-    <DashboardLayout section="seller">
+    <DashboardLayout section="user">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Buy Credits</h1>
-            <p className="text-muted-foreground">Purchase credits to add & manage users</p>
+            <p className="text-muted-foreground">Purchase credits to create & manage users for reselling</p>
           </div>
           {seller && (
             <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2">
