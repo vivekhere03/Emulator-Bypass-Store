@@ -65,9 +65,11 @@ const App = () => (
             <Route path="/dashboard/orders" element={<ProtectedRoute><UserOrders /></ProtectedRoute>} />
             <Route path="/dashboard/invoices" element={<ProtectedRoute><UserInvoices /></ProtectedRoute>} />
 
-            {/* Seller dashboard */}
+            {/* Buy Credits - accessible to ALL logged-in users */}
+            <Route path="/buy-credits" element={<ProtectedRoute><SellerCredits /></ProtectedRoute>} />
+
+            {/* Seller dashboard - only after they have credits/seller role */}
             <Route path="/seller" element={<ProtectedRoute requiredRole="seller"><SellerOverview /></ProtectedRoute>} />
-            <Route path="/seller/credits" element={<ProtectedRoute requiredRole="seller"><SellerCredits /></ProtectedRoute>} />
             <Route path="/seller/api-key" element={<ProtectedRoute requiredRole="seller"><SellerApiKey /></ProtectedRoute>} />
             <Route path="/seller/users" element={<ProtectedRoute requiredRole="seller"><SellerUsers /></ProtectedRoute>} />
             <Route path="/seller/history" element={<ProtectedRoute requiredRole="seller"><SellerHistory /></ProtectedRoute>} />

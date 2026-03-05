@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Zap, Users, ArrowRight, Clock, DollarSign } from "lucide-react";
+import { Shield, Zap, Users, ArrowRight, Clock, DollarSign, Coins } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Product {
   id: string;
@@ -17,6 +18,7 @@ interface Product {
 }
 
 const Index = () => {
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,8 +73,8 @@ const Index = () => {
               <span className="text-foreground">License Portal</span>
             </h1>
             <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground">
-              Get premium access to the best tools. Purchase individual licenses or become a seller
-              and manage your own reseller business with our powerful API.
+              Get premium access to the best tools. Purchase individual licenses or buy credits to
+              start reselling and manage your own business.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Button size="lg" className="gap-2 text-base" asChild>
@@ -81,7 +83,9 @@ const Index = () => {
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="gap-2 text-base" asChild>
-                <Link to="/register">Sign Up to Start Selling</Link>
+                <Link to={user ? "/buy-credits" : "/register"}>
+                  <Coins className="h-4 w-4" /> {user ? "Buy Credits & Resell" : "Sign Up to Resell"}
+                </Link>
               </Button>
             </div>
           </motion.div>
@@ -92,7 +96,7 @@ const Index = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               { icon: Shield, label: "Secure Payments", desc: "Binance Pay verified" },
-              { icon: Users, label: "Seller Program", desc: "Buy credits & resell" },
+              { icon: Users, label: "Reseller Program", desc: "Buy credits & start selling" },
               { icon: Zap, label: "Instant Delivery", desc: "Auto-provisioned accounts" },
             ].map((stat, i) => (
               <motion.div

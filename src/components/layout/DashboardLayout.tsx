@@ -5,7 +5,7 @@ import Navbar from "./Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, ShoppingCart, CreditCard, Key, Users,
-  Package, Settings, BarChart3, FileText, History, Shield
+  Package, Settings, BarChart3, FileText, History, Shield, Coins
 } from "lucide-react";
 
 interface NavItem {
@@ -16,12 +16,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  // User items (visible to all logged-in users)
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "My Orders", href: "/dashboard/orders", icon: ShoppingCart },
   { label: "Invoices", href: "/dashboard/invoices", icon: FileText },
+  { label: "Buy Credits", href: "/buy-credits", icon: Coins },
   // Seller items
-  { label: "Overview", href: "/seller", icon: BarChart3, roles: ["seller"] },
-  { label: "Buy Credits", href: "/seller/credits", icon: CreditCard, roles: ["seller"] },
+  { label: "Seller Overview", href: "/seller", icon: BarChart3, roles: ["seller"] },
   { label: "API Key", href: "/seller/api-key", icon: Key, roles: ["seller"] },
   { label: "Manage Users", href: "/seller/users", icon: Users, roles: ["seller"] },
   { label: "Credit History", href: "/seller/history", icon: History, roles: ["seller"] },
@@ -45,9 +46,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, section }) 
   const { isAdmin, isSeller } = useAuth();
 
   const filteredItems = navItems.filter((item) => {
-    if (section === "user" && !item.roles) return item.href.startsWith("/dashboard");
+    if (section === "user" && !item.roles) return true;
     if (section === "seller" && item.roles?.includes("seller")) return isSeller;
     if (section === "admin" && item.roles?.includes("admin")) return isAdmin;
+    // Show seller items in user section too if user is seller
+    if (section === "user" && item.roles?.includes("seller")) return isSeller;
     return false;
   });
 
