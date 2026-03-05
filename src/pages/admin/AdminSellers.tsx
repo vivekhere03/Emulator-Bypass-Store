@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, Minus } from "lucide-react";
+import { Users, Plus, Minus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminSellers = () => {
@@ -18,6 +18,10 @@ const AdminSellers = () => {
     action: "add",
   });
   const [creditAmount, setCreditAmount] = useState("");
+  const [addSellerDialog, setAddSellerDialog] = useState(false);
+  const [addSellerEmail, setAddSellerEmail] = useState("");
+  const [addSellerCredits, setAddSellerCredits] = useState("0");
+  const [addSellerLoading, setAddSellerLoading] = useState(false);
 
   const fetchSellers = async () => {
     const { data: sellersData } = await supabase
