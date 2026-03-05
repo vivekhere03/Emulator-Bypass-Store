@@ -1,10 +1,40 @@
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, FileText, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ShoppingCart, FileText, User, KeyRound } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const UserDashboard = () => {
   const { user } = useAuth();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password updated successfully");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
+    setChangingPassword(false);
+  };
 
   return (
     <DashboardLayout section="user">
@@ -33,6 +63,44 @@ const UserDashboard = () => {
             </Card>
           ))}
         </div>
+
+        {/* Change Password */}
+        <Card className="glass-card max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <KeyRound className="h-5 w-5 text-primary" />
+              Change Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Min 6 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="Re-enter password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <Button
+              onClick={handleChangePassword}
+              disabled={changingPassword || !newPassword || !confirmPassword}
+            >
+              {changingPassword ? "Updating..." : "Update Password"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
