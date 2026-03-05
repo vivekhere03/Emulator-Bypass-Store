@@ -164,8 +164,21 @@ const SellerApiKey = () => {
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>API Documentation</CardTitle>
-            <CardDescription>
-              Base URL: <code className="text-primary">https://bypass.cgxhub.in</code>
+            <CardDescription className="space-y-1">
+              <span>Base URL: <code className="text-primary">https://bypass.cgxhub.in</code></span>
+              <br />
+              <span>
+                Or use the Seller Panel directly:{" "}
+                <a
+                  href="https://seller.cgxhub.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  https://seller.cgxhub.in/
+                </a>
+                {" "}— manage users from the web without writing any code.
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
