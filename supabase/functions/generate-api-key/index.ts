@@ -142,7 +142,10 @@ Deno.serve(async (req) => {
         success: true,
         api_key: apiKey,
         prefix: apiKeyPrefix,
-        message: "Save this key now — it won't be shown again!",
+        server_synced: serverSynced,
+        message: serverSynced
+          ? "Save this key now — it won't be shown again!"
+          : "Key generated locally. Server sync pending — key will work once server endpoint is available.",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
