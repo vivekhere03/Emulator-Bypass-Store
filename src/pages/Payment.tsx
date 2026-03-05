@@ -6,8 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, CheckCircle2, Copy, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import binancePayQr from "@/assets/binance-pay-qr.png";
+import bep20Qr from "@/assets/bep20-qr.jpeg";
+
+const BEP20_ADDRESS = "0xbbf4a99e4ccca52535c2a00e2066e63e6448b1d1";
+const BINANCE_PAY_ID = "892343627";
 
 const Payment = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -16,6 +22,7 @@ const Payment = () => {
   const [transactionId, setTransactionId] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState<"binance_pay" | "bep20">("binance_pay");
 
   const isCreditPurchase = order?.invoice_data?.type === "credit_purchase";
 
@@ -32,9 +39,18 @@ const Payment = () => {
     if (orderId) fetchOrder();
   }, [orderId]);
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied!`);
+  };
+
   const handleVerify = async () => {
     if (!transactionId.trim()) {
-      toast.error("Enter your Binance Pay transaction ID");
+      toast.error(
+        paymentMethod === "binance_pay"
+          ? "Enter your Binance Pay Order ID"
+          : "Enter your BEP20 transaction hash"
+      );
       return;
     }
     setVerifying(true);
@@ -44,7 +60,7 @@ const Payment = () => {
         body: {
           order_id: orderId,
           transaction_id: transactionId.trim(),
-          payment_type: "binance_pay",
+          payment_type: paymentMethod,
           expected_amount: order.amount,
         },
       });
@@ -52,7 +68,11 @@ const Payment = () => {
       if (error) throw error;
 
       if (data?.success) {
-        toast.success(isCreditPurchase ? "Payment verified! Credits added." : "Payment verified! Account created.");
+        toast.success(
+          isCreditPurchase
+            ? "Payment verified! Credits added."
+            : "Payment verified! Account created."
+        );
         navigate(`/order-success/${orderId}`);
       } else {
         toast.error(data?.error || "Payment verification failed");
@@ -91,9 +111,12 @@ const Payment = () => {
           <CardHeader className="text-center">
             <Shield className="mx-auto mb-2 h-10 w-10 text-primary" />
             <CardTitle className="text-2xl">Complete Payment</CardTitle>
-            <CardDescription>Send the exact amount via Binance Pay and verify</CardDescription>
+            <CardDescription>
+              Send the exact amount and verify your payment
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Order Summary */}
             <div className="rounded-xl bg-secondary/50 p-4 space-y-3">
               {isCreditPurchase ? (
                 <>
@@ -124,28 +147,132 @@ const Payment = () => {
               )}
               <div className="flex justify-between border-t border-border/50 pt-2 text-lg font-bold">
                 <span>Amount</span>
-                <span className="text-primary">${Number(order.amount).toFixed(2)} USDT</span>
+                <span className="text-primary">
+                  ${Number(order.amount).toFixed(2)} USDT
+                </span>
               </div>
             </div>
 
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center">
-              <p className="mb-2 text-sm text-muted-foreground">
-                Send exactly <strong className="text-foreground">${Number(order.amount).toFixed(2)} USDT</strong> via Binance Pay
-              </p>
-              <p className="text-xs text-muted-foreground">
-                After payment, paste your transaction ID below
-              </p>
-            </div>
+            {/* Payment Method Tabs */}
+            <Tabs
+              value={paymentMethod}
+              onValueChange={(v) => {
+                setPaymentMethod(v as "binance_pay" | "bep20");
+                setTransactionId("");
+              }}
+            >
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="binance_pay">
+                  <Wallet className="mr-1.5 h-4 w-4" /> Binance Pay
+                </TabsTrigger>
+                <TabsTrigger value="bep20">
+                  <Shield className="mr-1.5 h-4 w-4" /> BEP20 (USDT)
+                </TabsTrigger>
+              </TabsList>
 
+              {/* Binance Pay Tab */}
+              <TabsContent value="binance_pay" className="space-y-4 mt-4">
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src={binancePayQr}
+                    alt="Binance Pay QR"
+                    className="w-48 h-48 rounded-xl border border-border"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Scan with Binance App → Pay
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Binance Pay ID</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm font-mono text-foreground">
+                      {BINANCE_PAY_ID}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(BINANCE_PAY_ID, "Pay ID")}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Name: Vivek Chauhan</p>
+                </div>
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Send exactly{" "}
+                    <strong className="text-foreground">
+                      ${Number(order.amount).toFixed(2)} USDT
+                    </strong>{" "}
+                    via Binance Pay
+                  </p>
+                </div>
+              </TabsContent>
+
+              {/* BEP20 Tab */}
+              <TabsContent value="bep20" className="space-y-4 mt-4">
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src={bep20Qr}
+                    alt="BEP20 QR"
+                    className="w-48 h-48 rounded-xl border border-border"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Scan to send USDT (BEP20 / BSC network)
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    USDT Address (BEP20 - BSC)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs font-mono text-foreground break-all">
+                      {BEP20_ADDRESS}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(BEP20_ADDRESS, "Address")}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Send exactly{" "}
+                    <strong className="text-foreground">
+                      ${Number(order.amount).toFixed(2)} USDT
+                    </strong>{" "}
+                    on <strong className="text-foreground">BSC (BEP20)</strong> network
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Transaction ID Input */}
             <div className="space-y-2">
-              <Label htmlFor="txId">Binance Pay Transaction ID</Label>
+              <Label htmlFor="txId">
+                {paymentMethod === "binance_pay"
+                  ? "Binance Pay Order ID"
+                  : "BEP20 Transaction Hash"}
+              </Label>
               <Input
                 id="txId"
-                placeholder="e.g., prepay_id_xxxxx"
+                placeholder={
+                  paymentMethod === "binance_pay"
+                    ? "e.g., 1234567890"
+                    : "e.g., 0xabc123..."
+                }
                 value={transactionId}
                 onChange={(e) => setTransactionId(e.target.value)}
                 className="font-mono"
               />
+              <p className="text-xs text-muted-foreground">
+                {paymentMethod === "binance_pay"
+                  ? "Find this in Binance App → Pay → Transaction History → Order ID"
+                  : "Find this in your wallet's transaction history (the tx hash)"}
+              </p>
             </div>
 
             <Button
