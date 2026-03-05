@@ -325,6 +325,42 @@ const AdminSellers = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Seller Dialog */}
+      <Dialog open={addSellerDialog} onOpenChange={(o) => { if (!o) { setAddSellerDialog(false); setAddSellerEmail(""); setAddSellerCredits("0"); } }}>
+        <DialogContent className="glass-card">
+          <DialogHeader>
+            <DialogTitle>Add New Seller</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter the email of a registered user to convert them into a seller.
+            </p>
+            <div className="space-y-2">
+              <Label>User Email</Label>
+              <Input
+                type="email"
+                placeholder="user@example.com"
+                value={addSellerEmail}
+                onChange={(e) => setAddSellerEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Initial Credits (optional)</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="0"
+                value={addSellerCredits}
+                onChange={(e) => setAddSellerCredits(e.target.value)}
+              />
+            </div>
+            <Button className="w-full" onClick={handleAddSeller} disabled={addSellerLoading}>
+              {addSellerLoading ? "Adding..." : "Make Seller"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
