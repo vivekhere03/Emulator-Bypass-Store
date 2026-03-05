@@ -6,6 +6,152 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ── Binance API helpers ─────────────────────────────────────────
+
+function generateSignature(queryString: string, secret: string): string {
+  const encoder = new TextEncoder();
+  const key = encoder.encode(secret);
+  const data = encoder.encode(queryString);
+
+  // Use Web Crypto HMAC-SHA256
+  // Deno supports createHmac via std, but let's use the sync approach
+  const hmac = new Uint8Array(32);
+  // We'll use a simpler approach with crypto.subtle
+  return ""; // placeholder — we'll use async version below
+}
+
+async function hmacSha256(secret: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function getBinancePayTransactions(
+  apiKey: string,
+  apiSecret: string,
+  limit = 50
+): Promise<{ success: boolean; data?: any[]; error?: string }> {
+  try {
+    const timestamp = Date.now().toString();
+    const qs = `timestamp=${timestamp}&limit=${limit}`;
+    const signature = await hmacSha256(apiSecret, qs);
+
+    const resp = await fetch(
+      `https://api.binance.com/sapi/v1/pay/transactions?${qs}&signature=${signature}`,
+      { headers: { "X-MBX-APIKEY": apiKey } }
+    );
+    const json = await resp.json();
+
+    if (!resp.ok) {
+      return { success: false, error: json.msg || `HTTP ${resp.status}` };
+    }
+
+    const data = Array.isArray(json) ? json : json.data || [];
+    return { success: true, data };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+async function getBep20Deposits(
+  apiKey: string,
+  apiSecret: string,
+  limit = 50
+): Promise<{ success: boolean; data?: any[]; error?: string }> {
+  try {
+    const timestamp = Date.now().toString();
+    const qs = `timestamp=${timestamp}&limit=${limit}&coin=USDT&network=BSC`;
+    const signature = await hmacSha256(apiSecret, qs);
+
+    const resp = await fetch(
+      `https://api.binance.com/sapi/v1/capital/deposit/hisrec?${qs}&signature=${signature}`,
+      { headers: { "X-MBX-APIKEY": apiKey } }
+    );
+    const json = await resp.json();
+
+    if (!resp.ok) {
+      return { success: false, error: json.msg || `HTTP ${resp.status}` };
+    }
+
+    return { success: true, data: Array.isArray(json) ? json : [] };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function verifyBinancePayTx(
+  transactions: any[],
+  orderId: string,
+  expectedAmount: number,
+  timeWindowHours: number
+): { success: boolean; message: string } {
+  const cutoff = Date.now() - timeWindowHours * 3600 * 1000;
+
+  for (const tx of transactions) {
+    const txOrderId = tx.orderId || tx.id || tx.prepayId || "";
+    if (txOrderId !== orderId) continue;
+
+    const timeField = tx.transactionTime || tx.createTime || tx.time || "0";
+    const txTime = String(timeField).length > 10 ? Number(timeField) : Number(timeField) * 1000;
+    const txAmount = parseFloat(tx.amount || "0");
+    const currency = (tx.currency || "").toUpperCase();
+
+    if (txTime < cutoff) {
+      return { success: false, message: "Transaction found but is too old. Contact admin." };
+    }
+    if (currency === "USDT" && Math.abs(txAmount - expectedAmount) < 0.01) {
+      return { success: true, message: `Binance Pay verified: ${txAmount} USDT` };
+    }
+    return {
+      success: false,
+      message: `Amount/currency mismatch. Expected ${expectedAmount} USDT, found ${txAmount} ${currency}`,
+    };
+  }
+  return { success: false, message: "Order ID not found in recent Binance Pay transactions" };
+}
+
+function verifyBep20Tx(
+  transactions: any[],
+  txId: string,
+  expectedAmount: number,
+  timeWindowHours: number
+): { success: boolean; message: string } {
+  const cutoff = Date.now() - timeWindowHours * 3600 * 1000;
+
+  for (const tx of transactions) {
+    const txTxId = tx.txId || tx.id || "";
+    if (txTxId !== txId && !txTxId.includes(txId) && !txId.includes(txTxId)) continue;
+
+    const insertTime = tx.insertTime || "0";
+    const txTime = String(insertTime).length > 10 ? Number(insertTime) : Number(insertTime) * 1000;
+    const txAmount = parseFloat(tx.amount || "0");
+    const coin = (tx.coin || "").toUpperCase();
+
+    if (txTime < cutoff) {
+      return { success: false, message: "Transaction found but is too old. Contact admin." };
+    }
+    if (coin === "USDT" && Math.abs(txAmount - expectedAmount) < 0.01) {
+      return { success: true, message: `BEP20 deposit verified: ${txAmount} USDT` };
+    }
+    return {
+      success: false,
+      message: `Amount/currency mismatch. Expected ${expectedAmount} USDT, found ${txAmount} ${coin}`,
+    };
+  }
+  return { success: false, message: "Transaction not found in recent BEP20 deposits" };
+}
+
+// ── Main handler ────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -41,6 +187,13 @@ Deno.serve(async (req) => {
 
     if (!order_id || !transaction_id) {
       return new Response(JSON.stringify({ error: "Missing order_id or transaction_id" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!["binance_pay", "bep20"].includes(payment_type)) {
+      return new Response(JSON.stringify({ error: "Invalid payment_type" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -95,9 +248,52 @@ Deno.serve(async (req) => {
       );
     }
 
-    // TODO: Add actual Binance Pay API verification here
-    // For now, we mark as completed (admin can review in orders panel)
-    // In production, call Binance Pay API to verify the transaction
+    // ── Real Binance API verification ───────────────────────────
+    const BINANCE_API_KEY = Deno.env.get("BINANCE_API_KEY");
+    const BINANCE_SECRET_KEY = Deno.env.get("BINANCE_SECRET_KEY");
+
+    if (!BINANCE_API_KEY || !BINANCE_SECRET_KEY) {
+      console.error("Missing BINANCE_API_KEY or BINANCE_SECRET_KEY");
+      return new Response(
+        JSON.stringify({ error: "Payment verification not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const TIME_WINDOW_HOURS = 24; // 24-hour verification window
+    let verifyResult: { success: boolean; message: string };
+
+    if (payment_type === "binance_pay") {
+      const txResult = await getBinancePayTransactions(BINANCE_API_KEY, BINANCE_SECRET_KEY);
+      if (!txResult.success) {
+        console.error("Binance Pay API error:", txResult.error);
+        return new Response(
+          JSON.stringify({ error: `Failed to verify with Binance: ${txResult.error}` }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      verifyResult = verifyBinancePayTx(txResult.data!, transaction_id, expected_amount, TIME_WINDOW_HOURS);
+    } else {
+      // bep20
+      const txResult = await getBep20Deposits(BINANCE_API_KEY, BINANCE_SECRET_KEY);
+      if (!txResult.success) {
+        console.error("BEP20 API error:", txResult.error);
+        return new Response(
+          JSON.stringify({ error: `Failed to verify with Binance: ${txResult.error}` }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      verifyResult = verifyBep20Tx(txResult.data!, transaction_id, expected_amount, TIME_WINDOW_HOURS);
+    }
+
+    if (!verifyResult.success) {
+      return new Response(
+        JSON.stringify({ success: false, error: verifyResult.message }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Payment verified — process the order ────────────────────
 
     // Update order status
     await adminClient
@@ -115,7 +311,6 @@ Deno.serve(async (req) => {
       const sellerId = invoiceData.seller_id as string;
       const credits = invoiceData.credits as number;
 
-      // Add credits to seller
       const { data: seller } = await adminClient
         .from("sellers")
         .select("credit_balance")
@@ -128,7 +323,6 @@ Deno.serve(async (req) => {
           .update({ credit_balance: (seller.credit_balance || 0) + credits })
           .eq("id", sellerId);
 
-        // Log credit transaction
         await adminClient.from("credit_transactions").insert({
           seller_id: sellerId,
           amount: credits,
@@ -151,7 +345,6 @@ Deno.serve(async (req) => {
 
       if (SERVICE_KEY) {
         try {
-          // Get duration info
           const { data: duration } = await adminClient
             .from("product_durations")
             .select("duration_days")
