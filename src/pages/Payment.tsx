@@ -61,7 +61,6 @@ const Payment = () => {
           order_id: orderId,
           transaction_id: transactionId.trim(),
           payment_type: paymentMethod,
-          expected_amount: order.amount,
         },
       });
 

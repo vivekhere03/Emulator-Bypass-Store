@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    const { order_id, transaction_id, payment_type, expected_amount } = await req.json();
+    const { order_id, transaction_id, payment_type } = await req.json();
 
     if (!order_id || !transaction_id) {
       return new Response(JSON.stringify({ error: "Missing order_id or transaction_id" }), {
@@ -260,7 +260,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const TIME_WINDOW_HOURS = 24; // 24-hour verification window
+    // SECURITY: Always use the server-side order amount, never trust client-provided amount
+    const expectedAmount = parseFloat(order.amount);
+    if (isNaN(expectedAmount) || expectedAmount <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid order amount" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const TIME_WINDOW_HOURS = 24;
     let verifyResult: { success: boolean; message: string };
 
     if (payment_type === "binance_pay") {
@@ -272,9 +281,8 @@ Deno.serve(async (req) => {
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      verifyResult = verifyBinancePayTx(txResult.data!, transaction_id, expected_amount, TIME_WINDOW_HOURS);
+      verifyResult = verifyBinancePayTx(txResult.data!, transaction_id, expectedAmount, TIME_WINDOW_HOURS);
     } else {
-      // bep20
       const txResult = await getBep20Deposits(BINANCE_API_KEY, BINANCE_SECRET_KEY);
       if (!txResult.success) {
         console.error("BEP20 API error:", txResult.error);
@@ -283,7 +291,7 @@ Deno.serve(async (req) => {
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      verifyResult = verifyBep20Tx(txResult.data!, transaction_id, expected_amount, TIME_WINDOW_HOURS);
+      verifyResult = verifyBep20Tx(txResult.data!, transaction_id, expectedAmount, TIME_WINDOW_HOURS);
     }
 
     if (!verifyResult.success) {
