@@ -51,11 +51,6 @@ const SellerUsers = () => {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("seller-api", {
-        body: {},
-        headers: { "Content-Type": "application/json" },
-      });
-      // Use query param approach
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/seller-api?action=list-users`,
         {
