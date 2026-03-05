@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, Copy, CheckCircle2 } from "lucide-react";
+import { Shield, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Payment = () => {
@@ -16,6 +16,8 @@ const Payment = () => {
   const [transactionId, setTransactionId] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const isCreditPurchase = order?.invoice_data?.type === "credit_purchase";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -50,7 +52,7 @@ const Payment = () => {
       if (error) throw error;
 
       if (data?.success) {
-        toast.success("Payment verified! Account created.");
+        toast.success(isCreditPurchase ? "Payment verified! Credits added." : "Payment verified! Account created.");
         navigate(`/order-success/${orderId}`);
       } else {
         toast.error(data?.error || "Payment verification failed");
@@ -93,18 +95,33 @@ const Payment = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-xl bg-secondary/50 p-4 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Product</span>
-                <span>{order.products?.name}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Duration</span>
-                <span>{order.product_durations?.duration_label}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Username</span>
-                <span className="font-mono">{order.username_created}</span>
-              </div>
+              {isCreditPurchase ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Package</span>
+                    <span>{order.invoice_data.package_name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Credits</span>
+                    <span>{order.invoice_data.credits} credits</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Product</span>
+                    <span>{order.products?.name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Duration</span>
+                    <span>{order.product_durations?.duration_label}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Username</span>
+                    <span className="font-mono">{order.username_created}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between border-t border-border/50 pt-2 text-lg font-bold">
                 <span>Amount</span>
                 <span className="text-primary">${Number(order.amount).toFixed(2)} USDT</span>
