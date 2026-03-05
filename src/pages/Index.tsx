@@ -81,7 +81,7 @@ const Index = () => {
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="gap-2 text-base" asChild>
-                <Link to="/register">Become a Seller</Link>
+                <Link to="/become-seller">Become a Seller</Link>
               </Button>
             </div>
           </motion.div>
@@ -198,7 +198,7 @@ const Index = () => {
               Join our seller program and get access to our powerful API. Manage users, earn from reselling, and grow your business.
             </p>
             <Button size="lg" asChild>
-              <Link to="/register">Get Started <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              <Link to="/become-seller">Get Started <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
         </div>
