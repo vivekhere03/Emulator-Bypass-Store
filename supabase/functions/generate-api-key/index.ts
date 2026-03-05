@@ -101,32 +101,7 @@ Deno.serve(async (req) => {
 
     const keyName = profile?.display_name || profile?.email?.split("@")[0] || seller.id.substring(0, 8);
 
-    // Register API key on bypass server
-    const registerResp = await fetch(`${BYPASS_URL}/api/service/keys/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Service-Key": SERVICE_KEY,
-      },
-      body: JSON.stringify({
-        api_key: apiKey,
-        seller_id: seller.id,
-        key_name: keyName,
-        initial_credits: seller.credit_balance,
-        expires: "2027-12-31", // 2 year expiry
-      }),
-    });
-
-    if (!registerResp.ok) {
-      const errData = await registerResp.json().catch(() => ({}));
-      console.error("Failed to register key on bypass server:", errData);
-      return new Response(
-        JSON.stringify({ error: "Failed to register API key on server" }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Store hash and prefix in sellers table
+    // Store hash and prefix in sellers table FIRST (this always works)
     await adminClient
       .from("sellers")
       .update({
@@ -134,6 +109,32 @@ Deno.serve(async (req) => {
         api_key_prefix: apiKeyPrefix,
       })
       .eq("id", seller.id);
+
+    // Try to register API key on bypass server (non-blocking)
+    let serverSynced = false;
+    try {
+      const registerResp = await fetch(`${BYPASS_URL}/api/service/keys/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Service-Key": SERVICE_KEY,
+        },
+        body: JSON.stringify({
+          api_key: apiKey,
+          seller_id: seller.id,
+          key_name: keyName,
+          initial_credits: seller.credit_balance,
+          expires: "2027-12-31",
+        }),
+      });
+      serverSynced = registerResp.ok;
+      if (!registerResp.ok) {
+        const errData = await registerResp.text();
+        console.error("Bypass server key registration failed (non-fatal):", errData);
+      }
+    } catch (e) {
+      console.error("Bypass server unreachable (non-fatal):", e.message);
+    }
 
     // Return the FULL key — only shown ONCE
     return new Response(
