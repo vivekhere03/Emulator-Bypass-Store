@@ -77,7 +77,7 @@ const SellerHistory = () => {
                           {t.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className={t.amount > 0 ? "text-green-500 font-semibold" : "text-red-400 font-semibold"}>
+                      <TableCell className={`font-semibold ${t.amount > 0 ? "text-primary" : "text-destructive"}`}>
                         {t.amount > 0 ? `+${t.amount}` : t.amount}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{t.description}</TableCell>
