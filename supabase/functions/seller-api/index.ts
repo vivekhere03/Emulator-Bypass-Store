@@ -198,6 +198,17 @@ Deno.serve(async (req) => {
           description: `Extended user: ${username.trim().toLowerCase()} by ${duration_days || 7} days`,
         });
 
+        // Sync deduction to bypass server API key
+        if (seller.api_key_hash) {
+          try {
+            await fetch(`${BYPASS_URL}/api/service/keys/deduct-credits`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY },
+              body: JSON.stringify({ seller_id: seller.id, credits: 1 }),
+            });
+          } catch (_) { /* non-critical */ }
+        }
+
         await adminClient.from("api_usage_logs").insert({
           seller_id: seller.id,
           endpoint: "extend-user",
