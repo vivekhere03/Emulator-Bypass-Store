@@ -14,16 +14,376 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_usage_logs: {
+        Row: {
+          created_at: string
+          credits_used: number
+          endpoint: string
+          id: string
+          request_body: Json | null
+          response_body: Json | null
+          response_status: number | null
+          seller_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number
+          endpoint: string
+          id?: string
+          request_body?: Json | null
+          response_body?: Json | null
+          response_status?: number | null
+          seller_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number
+          endpoint?: string
+          id?: string
+          request_body?: Json | null
+          response_body?: Json | null
+          response_status?: number | null
+          seller_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_logs_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_packages: {
+        Row: {
+          created_at: string
+          credits: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          order_id: string | null
+          seller_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          seller_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          seller_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount: number
+          created_at: string
+          duration_id: string | null
+          id: string
+          invoice_data: Json | null
+          product_id: string | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+          username_created: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          duration_id?: string | null
+          id?: string
+          invoice_data?: Json | null
+          product_id?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+          username_created?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          duration_id?: string | null
+          id?: string
+          invoice_data?: Json | null
+          product_id?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+          username_created?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_duration_id_fkey"
+            columns: ["duration_id"]
+            isOneToOne: false
+            referencedRelation: "product_durations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_durations: {
+        Row: {
+          created_at: string
+          duration_days: number
+          duration_label: string
+          id: string
+          price: number
+          product_id: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          duration_days: number
+          duration_label: string
+          id?: string
+          price: number
+          product_id: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          duration_days?: number
+          duration_label?: string
+          id?: string
+          price?: number
+          product_id?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_durations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          sort_order: number | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sellers: {
+        Row: {
+          api_key_hash: string | null
+          api_key_prefix: string | null
+          created_at: string
+          credit_balance: number
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key_hash?: string | null
+          api_key_prefix?: string | null
+          created_at?: string
+          credit_balance?: number
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key_hash?: string | null
+          api_key_prefix?: string | null
+          created_at?: string
+          credit_balance?: number
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "seller" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +510,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "seller", "user"],
+    },
   },
 } as const
