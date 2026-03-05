@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Package } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import MediaUpload from "@/components/MediaUpload";
 
 const AdminProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -67,16 +68,21 @@ const AdminProducts = () => {
     fetchProducts();
   };
 
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({ name: "", description: "", image_url: "", video_url: "" });
+  };
+
   return (
     <DashboardLayout section="admin">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Products</h1>
-          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditingId(null); setForm({ name: "", description: "", image_url: "", video_url: "" }); } }}>
+          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" /> Add Product</Button>
             </DialogTrigger>
-            <DialogContent className="glass-card">
+            <DialogContent className="glass-card max-h-[90vh] overflow-y-auto sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>{editingId ? "Edit Product" : "Add Product"}</DialogTitle>
               </DialogHeader>
@@ -90,12 +96,28 @@ const AdminProducts = () => {
                   <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Image URL</Label>
-                  <Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." />
+                  <Label>Product Image</Label>
+                  <MediaUpload
+                    bucket="product-media"
+                    folder="images"
+                    accept="image/*"
+                    value={form.image_url}
+                    onChange={(url) => setForm({ ...form, image_url: url })}
+                    label="Image"
+                    type="image"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>Video URL</Label>
-                  <Input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://..." />
+                  <Label>Product Video</Label>
+                  <MediaUpload
+                    bucket="product-media"
+                    folder="videos"
+                    accept="video/*"
+                    value={form.video_url}
+                    onChange={(url) => setForm({ ...form, video_url: url })}
+                    label="Video"
+                    type="video"
+                  />
                 </div>
                 <Button onClick={handleSave} className="w-full">
                   {editingId ? "Update" : "Create"} Product
@@ -109,6 +131,7 @@ const AdminProducts = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Image</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
@@ -118,6 +141,13 @@ const AdminProducts = () => {
             <TableBody>
               {products.map((p) => (
                 <TableRow key={p.id}>
+                  <TableCell>
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="h-10 w-14 rounded object-cover" />
+                    ) : (
+                      <div className="h-10 w-14 rounded bg-secondary flex items-center justify-center text-muted-foreground text-xs">No img</div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className={p.is_active ? "bg-green-500/10 text-green-500" : "bg-destructive/10 text-destructive"}>
