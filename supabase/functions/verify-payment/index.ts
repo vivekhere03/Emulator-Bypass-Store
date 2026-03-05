@@ -366,6 +366,12 @@ Deno.serve(async (req) => {
           order_id: order_id,
         });
 
+        // Ensure user has seller role
+        await adminClient.from("user_roles").insert({
+          user_id: order.user_id,
+          role: "seller",
+        }).select().maybeSingle(); // ignore conflict if already exists
+
         // Sync credits to bypass server API key (if seller has one)
         const { data: sellerFull } = await adminClient
           .from("sellers")
