@@ -101,6 +101,32 @@ const AdminSellers = () => {
     fetchSellers();
   };
 
+  const handleAddSeller = async () => {
+    if (!addSellerEmail.trim()) {
+      toast.error("Enter an email address");
+      return;
+    }
+    setAddSellerLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-add-seller", {
+        body: { email: addSellerEmail.trim(), credits: parseInt(addSellerCredits) || 0 },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.success(`${data.display_name || data.email} is now a seller!`);
+        setAddSellerDialog(false);
+        setAddSellerEmail("");
+        setAddSellerCredits("0");
+        fetchSellers();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add seller");
+    }
+    setAddSellerLoading(false);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
