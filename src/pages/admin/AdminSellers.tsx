@@ -32,7 +32,6 @@ const AdminSellers = () => {
       setSellers(merged);
       return;
     }
-    setSellers(data ?? []);
   };
 
   useEffect(() => { fetchSellers(); }, []);
