@@ -81,7 +81,7 @@ const Index = () => {
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="gap-2 text-base" asChild>
-                <Link to="/become-seller">Become a Seller</Link>
+                <Link to="/register">Sign Up to Start Selling</Link>
               </Button>
             </div>
           </motion.div>
@@ -92,7 +92,7 @@ const Index = () => {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               { icon: Shield, label: "Secure Payments", desc: "Binance Pay verified" },
-              { icon: Users, label: "Seller Program", desc: "API-based management" },
+              { icon: Users, label: "Seller Program", desc: "Buy credits & resell" },
               { icon: Zap, label: "Instant Delivery", desc: "Auto-provisioned accounts" },
             ].map((stat, i) => (
               <motion.div
@@ -186,21 +186,6 @@ const Index = () => {
               ))}
             </div>
           )}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="glass-card glow-border rounded-2xl p-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold">Become a Seller</h2>
-            <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-              Join our seller program and get access to our powerful API. Manage users, earn from reselling, and grow your business.
-            </p>
-            <Button size="lg" asChild>
-              <Link to="/become-seller">Get Started <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-          </div>
         </div>
       </section>
     </MainLayout>

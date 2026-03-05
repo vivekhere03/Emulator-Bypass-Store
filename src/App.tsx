@@ -13,7 +13,6 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ProductDetail from "./pages/ProductDetail";
-import BecomeSeller from "./pages/BecomeSeller";
 import Payment from "./pages/Payment";
 import OrderSuccess from "./pages/OrderSuccess";
 import NotFound from "./pages/NotFound";
@@ -56,7 +55,6 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/become-seller" element={<BecomeSeller />} />
 
             {/* Auth required */}
             <Route path="/payment/:orderId" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
