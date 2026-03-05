@@ -312,6 +312,32 @@ Deno.serve(async (req) => {
       })
       .eq("id", order_id);
 
+    // ── Send Discord webhook notification ───────────────────────
+    const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1479144146458644624/5SwcZlcOKpEOBqgoX3I5nNXGTlt24KdodQG55hwzDKALLEFj0aP-ULune1kApIQOGJUs";
+    try {
+      const embedColor = 0x00ff88; // green
+      const embed = {
+        title: "✅ Payment Verification Success",
+        description: "A new transaction has been successfully verified.",
+        color: embedColor,
+        fields: [
+          { name: "💰 Amount", value: `${expectedAmount} USDT`, inline: true },
+          { name: "📋 Method", value: payment_type === "binance_pay" ? "Binance Pay" : "BEP20 (USDT)", inline: true },
+          { name: "🔑 Transaction ID", value: `\`${transaction_id}\``, inline: false },
+          { name: "📦 Order ID", value: `\`${order_id}\``, inline: false },
+        ],
+        footer: { text: "CGX Payment System • Verified" },
+        timestamp: new Date().toISOString(),
+      };
+      await fetch(DISCORD_WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ embeds: [embed] }),
+      });
+    } catch (e) {
+      console.error("Discord webhook failed (non-fatal):", e);
+    }
+
     const invoiceData = order.invoice_data as Record<string, unknown> | null;
 
     // Handle credit purchase
