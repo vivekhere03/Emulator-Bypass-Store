@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, Minus } from "lucide-react";
+import { Users, Plus, Minus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 const AdminSellers = () => {
@@ -18,6 +18,10 @@ const AdminSellers = () => {
     action: "add",
   });
   const [creditAmount, setCreditAmount] = useState("");
+  const [addSellerDialog, setAddSellerDialog] = useState(false);
+  const [addSellerEmail, setAddSellerEmail] = useState("");
+  const [addSellerCredits, setAddSellerCredits] = useState("0");
+  const [addSellerLoading, setAddSellerLoading] = useState(false);
 
   const fetchSellers = async () => {
     const { data: sellersData } = await supabase
@@ -97,6 +101,32 @@ const AdminSellers = () => {
     fetchSellers();
   };
 
+  const handleAddSeller = async () => {
+    if (!addSellerEmail.trim()) {
+      toast.error("Enter an email address");
+      return;
+    }
+    setAddSellerLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-add-seller", {
+        body: { email: addSellerEmail.trim(), credits: parseInt(addSellerCredits) || 0 },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.success(`${data.display_name || data.email} is now a seller!`);
+        setAddSellerDialog(false);
+        setAddSellerEmail("");
+        setAddSellerCredits("0");
+        fetchSellers();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add seller");
+    }
+    setAddSellerLoading(false);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -116,7 +146,12 @@ const AdminSellers = () => {
   return (
     <DashboardLayout section="admin">
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Sellers</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Sellers</h1>
+          <Button onClick={() => setAddSellerDialog(true)}>
+            <UserPlus className="mr-2 h-4 w-4" /> Add Seller
+          </Button>
+        </div>
 
         {/* Pending Approvals */}
         {pendingSellers.length > 0 && (
@@ -286,6 +321,42 @@ const AdminSellers = () => {
             </div>
             <Button className="w-full" onClick={handleCreditAction}>
               {creditDialog.action === "add" ? "Add" : "Deduct"} Credits
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Seller Dialog */}
+      <Dialog open={addSellerDialog} onOpenChange={(o) => { if (!o) { setAddSellerDialog(false); setAddSellerEmail(""); setAddSellerCredits("0"); } }}>
+        <DialogContent className="glass-card">
+          <DialogHeader>
+            <DialogTitle>Add New Seller</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter the email of a registered user to convert them into a seller.
+            </p>
+            <div className="space-y-2">
+              <Label>User Email</Label>
+              <Input
+                type="email"
+                placeholder="user@example.com"
+                value={addSellerEmail}
+                onChange={(e) => setAddSellerEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Initial Credits (optional)</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="0"
+                value={addSellerCredits}
+                onChange={(e) => setAddSellerCredits(e.target.value)}
+              />
+            </div>
+            <Button className="w-full" onClick={handleAddSeller} disabled={addSellerLoading}>
+              {addSellerLoading ? "Adding..." : "Make Seller"}
             </Button>
           </div>
         </DialogContent>
