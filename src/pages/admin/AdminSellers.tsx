@@ -11,10 +11,27 @@ const AdminSellers = () => {
   const [sellers, setSellers] = useState<any[]>([]);
 
   const fetchSellers = async () => {
-    const { data } = await supabase
+    // Fetch sellers and profiles separately since no direct FK
+    const { data: sellersData } = await supabase
       .from("sellers")
-      .select("*, profiles(email, display_name)")
+      .select("*")
       .order("created_at", { ascending: false });
+    
+    if (sellersData) {
+      const userIds = sellersData.map(s => s.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, email, display_name")
+        .in("user_id", userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) ?? []);
+      const merged = sellersData.map(s => ({
+        ...s,
+        profile: profileMap.get(s.user_id) || null,
+      }));
+      setSellers(merged);
+      return;
+    }
     setSellers(data ?? []);
   };
 
@@ -51,8 +68,8 @@ const AdminSellers = () => {
                 <TableRow key={s.id}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{(s.profiles as any)?.display_name || "—"}</p>
-                      <p className="text-xs text-muted-foreground">{(s.profiles as any)?.email}</p>
+                      <p className="font-medium">{s.profile?.display_name || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{s.profile?.email}</p>
                     </div>
                   </TableCell>
                   <TableCell className="font-mono">{s.credit_balance}</TableCell>
