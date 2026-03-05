@@ -57,6 +57,32 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, section }) 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
+
+      {/* Mobile/tablet horizontal nav */}
+      <div className="border-b border-border/50 bg-card/30 lg:hidden">
+        <div className="flex gap-1 overflow-x-auto p-2 scrollbar-hide">
+          {filteredItems.map((item) => {
+            const Icon = item.icon;
+            const active = location.pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex flex-1">
         <aside className="hidden w-64 flex-shrink-0 border-r border-border/50 bg-card/30 lg:block">
           <div className="sticky top-16 flex flex-col gap-1 p-4">
@@ -84,7 +110,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, section }) 
             })}
           </div>
         </aside>
-        <div className="flex-1 p-6 lg:p-8">{children}</div>
+        <div className="flex-1 p-4 sm:p-6 lg:p-8">{children}</div>
       </div>
     </div>
   );
