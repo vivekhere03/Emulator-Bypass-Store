@@ -17,10 +17,6 @@ import Payment from "./pages/Payment";
 import OrderSuccess from "./pages/OrderSuccess";
 import NotFound from "./pages/NotFound";
 
-// User dashboard
-import UserDashboard from "./pages/dashboard/UserDashboard";
-import UserOrders from "./pages/dashboard/UserOrders";
-import UserInvoices from "./pages/dashboard/UserInvoices";
 
 // Seller dashboard
 import SellerOverview from "./pages/seller/SellerOverview";
@@ -60,10 +56,6 @@ const App = () => (
             <Route path="/payment/:orderId" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
             <Route path="/order-success/:orderId" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
 
-            {/* User dashboard */}
-            <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/orders" element={<ProtectedRoute><UserOrders /></ProtectedRoute>} />
-            <Route path="/dashboard/invoices" element={<ProtectedRoute><UserInvoices /></ProtectedRoute>} />
 
             {/* Buy Credits - accessible to ALL logged-in users */}
             <Route path="/buy-credits" element={<ProtectedRoute><SellerCredits /></ProtectedRoute>} />

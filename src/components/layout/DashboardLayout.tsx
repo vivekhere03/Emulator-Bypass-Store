@@ -16,10 +16,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  // User items (visible to all logged-in users)
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "My Orders", href: "/dashboard/orders", icon: ShoppingCart },
-  { label: "Invoices", href: "/dashboard/invoices", icon: FileText },
+  // User items (visible to all logged-in users initially)
   { label: "Buy Credits", href: "/buy-credits", icon: Coins },
   // Seller items
   { label: "Seller Overview", href: "/seller", icon: BarChart3, roles: ["seller"] },

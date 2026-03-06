@@ -68,7 +68,7 @@ const Index = () => {
               <Zap className="mr-1 h-3 w-3" /> Premium License Provider
             </Badge>
             <h1 className="mb-6 text-4xl font-black tracking-tight sm:text-5xl lg:text-7xl">
-              <span className="text-gradient">CGX Regedit</span>
+              <span className="text-gradient">Emulator Bypass Store</span>
               <br />
               <span className="text-foreground">License Portal</span>
             </h1>

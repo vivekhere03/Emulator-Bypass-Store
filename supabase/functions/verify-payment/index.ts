@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!["binance_pay", "bep20", "upi"].includes(payment_type)) {
+    if (!["binance_pay", "bep20"].includes(payment_type)) {
       return new Response(JSON.stringify({ error: "Invalid payment_type" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -301,28 +301,7 @@ Deno.serve(async (req) => {
     const TIME_WINDOW_HOURS = 24;
     let verifyResult: { success: boolean; message: string };
 
-    if (payment_type === "upi") {
-      const UPI_RATE = 90; // Fixed conversion rate: 1 USDT = 90 INR
-      const inrAmount = expectedAmount * UPI_RATE;
-      const utrParam = encodeURIComponent(transaction_id.trim());
-      const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY") || "CGXVIVEK&ISHITAdsfsdkfjh453590awdad$$#$#@$%";
-
-      try {
-        const resp = await fetch(`https://upi.cgxhub.in/api/upi/verify/${utrParam}?amount=${inrAmount}&order_id=${order_id}`, {
-          headers: { "X-Service-Key": vpsServiceKey }
-        });
-        const json = await resp.json();
-
-        if (resp.ok && json.verified) {
-          verifyResult = { success: true, message: `UPI payment verified: ${json.amount} INR from ${json.sender_upi}` };
-        } else {
-          verifyResult = { success: false, message: json.message || "UPI Verification failed. Try again." };
-        }
-      } catch (e) {
-        console.error("UPI Verification error:", e);
-        verifyResult = { success: false, message: `Failed to connect to UPI verification service: ${(e as Error).message}` };
-      }
-    } else if (payment_type === "binance_pay") {
+    if (payment_type === "binance_pay") {
       const txResult = await getBinancePayTransactions(BINANCE_API_KEY, BINANCE_SECRET_KEY);
       if (!txResult.success) {
         console.error("Binance Pay API error:", txResult.error);

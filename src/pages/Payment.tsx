@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, Copy, Wallet, Clock, XCircle, AlertTriangle, QrCode } from "lucide-react";
+import { Shield, CheckCircle2, Copy, Wallet, Clock, XCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import QRCode from "react-qr-code";
 import binancePayQr from "@/assets/binance-pay-qr.png";
 import bep20Qr from "@/assets/bep20-qr.jpeg";
 
@@ -24,7 +23,7 @@ const Payment = () => {
   const [transactionId, setTransactionId] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState<"binance_pay" | "bep20" | "upi">("upi");
+  const [paymentMethod, setPaymentMethod] = useState<"binance_pay" | "bep20">("binance_pay");
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [expired, setExpired] = useState(false);
 
@@ -132,9 +131,7 @@ const Payment = () => {
       toast.error(
         paymentMethod === "binance_pay"
           ? "Enter your Binance Pay Order ID"
-          : paymentMethod === "upi"
-            ? "Enter your UPI Reference No. (UTR)"
-            : "Enter your BEP20 transaction hash"
+          : "Enter your BEP20 transaction hash"
       );
       return;
     }
@@ -324,14 +321,11 @@ const Payment = () => {
             <Tabs
               value={paymentMethod}
               onValueChange={(v) => {
-                setPaymentMethod(v as "binance_pay" | "bep20" | "upi");
+                setPaymentMethod(v as "binance_pay" | "bep20");
                 setTransactionId("");
               }}
             >
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger value="upi">
-                  <QrCode className="mr-1.5 h-4 w-4" /> UPI
-                </TabsTrigger>
+              <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="binance_pay">
                   <Wallet className="mr-1.5 h-4 w-4" /> Binance Pay
                 </TabsTrigger>
@@ -339,46 +333,6 @@ const Payment = () => {
                   <Shield className="mr-1.5 h-4 w-4" /> BEP20 (USDT)
                 </TabsTrigger>
               </TabsList>
-
-              {/* UPI Tab */}
-              <TabsContent value="upi" className="space-y-4 mt-4">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="rounded-xl border border-border p-4 bg-white">
-                    <QRCode
-                      value={`upi://pay?pa=cgxvivek@ptyes&pn=CGX%20Store&am=${Math.ceil(Number(order.amount) * 90)}&tr=${order.id}&tn=Order%20${order.id}`}
-                      size={180}
-                      level="H"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Scan with PhonePe, GPay, Paytm, FamPay, etc.
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
-                  <p className="text-xs text-muted-foreground mb-1">UPI ID</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-sm font-mono text-foreground">
-                      cgxvivek@ptyes
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard("cgxvivek@ptyes", "UPI ID")}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Send exactly{" "}
-                    <strong className="text-foreground">
-                      ₹{Math.ceil(Number(order.amount) * 90)}
-                    </strong>{" "}
-                    via UPI
-                  </p>
-                </div>
-              </TabsContent>
 
               {/* Binance Pay Tab */}
               <TabsContent value="binance_pay" className="space-y-4 mt-4">
@@ -465,18 +419,14 @@ const Payment = () => {
               <Label htmlFor="txId">
                 {paymentMethod === "binance_pay"
                   ? "Binance Pay Order ID"
-                  : paymentMethod === "upi"
-                    ? "12-Digit UTR / Reference No."
-                    : "BEP20 Transaction Hash"}
+                  : "BEP20 Transaction Hash"}
               </Label>
               <Input
                 id="txId"
                 placeholder={
                   paymentMethod === "binance_pay"
                     ? "e.g., 1234567890"
-                    : paymentMethod === "upi"
-                      ? "e.g., 309812938471"
-                      : "e.g., 0xabc123..."
+                    : "e.g., 0xabc123..."
                 }
                 value={transactionId}
                 onChange={(e) => setTransactionId(e.target.value)}
@@ -485,9 +435,7 @@ const Payment = () => {
               <p className="text-xs text-muted-foreground">
                 {paymentMethod === "binance_pay"
                   ? "Find this in Binance App → Pay → Transaction History → Order ID"
-                  : paymentMethod === "upi"
-                    ? "Enter the 12-digit UTR from your UPI payment receipt"
-                    : "Find this in your wallet's transaction history (the tx hash)"}
+                  : "Find this in your wallet's transaction history (the tx hash)"}
               </p>
             </div>
 

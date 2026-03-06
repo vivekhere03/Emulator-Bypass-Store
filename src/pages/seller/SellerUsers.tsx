@@ -23,12 +23,7 @@ interface ManagedUser {
 }
 
 const DURATION_OPTIONS = [
-  { value: "1", label: "1 Day", credits: 1 },
-  { value: "3", label: "3 Days", credits: 2 },
-  { value: "7", label: "7 Days", credits: 5 },
-  { value: "15", label: "15 Days", credits: 8 },
-  { value: "30", label: "1 Month", credits: 15 },
-  { value: "90", label: "3 Months", credits: 30 },
+  { value: "30", label: "1 Month", credits: 1 },
 ];
 
 function getCreditsForDays(days: string): number {
@@ -53,19 +48,19 @@ const SellerUsers = () => {
   // Add single user
   const [addUsername, setAddUsername] = useState("");
   const [addHwid, setAddHwid] = useState("");
-  const [addDays, setAddDays] = useState("7");
+  const [addDays, setAddDays] = useState("30");
 
   // Bulk add
   const [bulkPrefix, setBulkPrefix] = useState("");
   const [bulkCount, setBulkCount] = useState("5");
-  const [bulkDays, setBulkDays] = useState("7");
+  const [bulkDays, setBulkDays] = useState("30");
   const [bulkResults, setBulkResults] = useState<string[]>([]);
 
   // Dialogs for table actions
   const [extendDialog, setExtendDialog] = useState<{ open: boolean; username: string }>({ open: false, username: "" });
-  const [extendDialogDays, setExtendDialogDays] = useState("7");
+  const [extendDialogDays, setExtendDialogDays] = useState("30");
   const [reduceDialog, setReduceDialog] = useState<{ open: boolean; username: string }>({ open: false, username: "" });
-  const [reduceDialogDays, setReduceDialogDays] = useState("7");
+  const [reduceDialogDays, setReduceDialogDays] = useState("30");
   const [removeDialog, setRemoveDialog] = useState<{ open: boolean; username: string }>({ open: false, username: "" });
   const [resetDialog, setResetDialog] = useState<{ open: boolean; username: string }>({ open: false, username: "" });
   const [resetDialogHwid, setResetDialogHwid] = useState("");

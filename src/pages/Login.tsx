@@ -51,7 +51,7 @@ const Login = () => {
           <CardHeader className="text-center">
             <Shield className="mx-auto mb-2 h-10 w-10 text-primary" />
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>Sign in to your CGX Regedit account</CardDescription>
+            <CardDescription>Sign in to your Emulator Bypass Store account</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">

@@ -78,7 +78,7 @@ const Register = () => {
           <CardHeader className="text-center">
             <Shield className="mx-auto mb-2 h-10 w-10 text-primary" />
             <CardTitle className="text-2xl">Create Account</CardTitle>
-            <CardDescription>Join CGX Regedit and get started</CardDescription>
+            <CardDescription>Join Emulator Bypass Store and get started</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
