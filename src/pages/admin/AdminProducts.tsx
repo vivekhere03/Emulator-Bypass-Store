@@ -25,7 +25,7 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", image_url: "", video_url: "" });
+  const [form, setForm] = useState({ name: "", description: "", image_url: "", video_url: "", download_url: "" });
   const [durations, setDurations] = useState<DurationForm[]>([]);
 
   const fetchProducts = async () => {
@@ -63,6 +63,7 @@ const AdminProducts = () => {
         description: form.description,
         image_url: form.image_url,
         video_url: form.video_url,
+        download_url: form.download_url || null,
       }).eq("id", editingId);
       if (error) { toast.error(error.message); return; }
     } else {
@@ -71,6 +72,7 @@ const AdminProducts = () => {
         description: form.description,
         image_url: form.image_url,
         video_url: form.video_url,
+        download_url: form.download_url || null,
       }).select().single();
       if (error) { toast.error(error.message); return; }
       productId = data.id;
@@ -108,6 +110,7 @@ const AdminProducts = () => {
       description: product.description || "",
       image_url: product.image_url || "",
       video_url: product.video_url || "",
+      download_url: product.download_url || "",
     });
     setDurations(
       (product.durations || []).map((d: any) => ({
@@ -131,7 +134,7 @@ const AdminProducts = () => {
 
   const resetForm = () => {
     setEditingId(null);
-    setForm({ name: "", description: "", image_url: "", video_url: "" });
+    setForm({ name: "", description: "", image_url: "", video_url: "", download_url: "" });
     setDurations([]);
   };
 
@@ -194,6 +197,15 @@ const AdminProducts = () => {
                     label="Video"
                     type="video"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Download Link <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input
+                    value={form.download_url}
+                    onChange={(e) => setForm({ ...form, download_url: e.target.value })}
+                    placeholder="e.g. https://example.com/product.exe"
+                  />
+                  <p className="text-xs text-muted-foreground">Users will see this download link after successful payment</p>
                 </div>
 
                 {/* Duration / Pricing Section */}
