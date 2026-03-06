@@ -64,7 +64,22 @@ const Payment = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Edge function errors put the response body in error.context
+        let errorMsg = "Verification failed";
+        try {
+          if (error.context && typeof error.context === "object") {
+            const body = await (error.context as Response).json();
+            errorMsg = body?.error || errorMsg;
+          } else if (error.message) {
+            errorMsg = error.message;
+          }
+        } catch {
+          errorMsg = error.message || errorMsg;
+        }
+        toast.error(errorMsg);
+        return;
+      }
 
       if (data?.success) {
         toast.success(
