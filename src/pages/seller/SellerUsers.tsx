@@ -173,7 +173,7 @@ const SellerUsers = () => {
       }
       // Re-fetch seller to get updated balance
       await fetchSeller();
-      if ((seller?.credit_balance ?? 0) < 1) break;
+      if ((seller?.credit_balance ?? 0) < getCreditsForDays(bulkDays)) break;
     }
 
     if (created.length > 0) {
