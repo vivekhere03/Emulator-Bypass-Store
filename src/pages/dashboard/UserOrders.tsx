@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 
 const UserOrders = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,6 +37,15 @@ const UserOrders = () => {
     }
   };
 
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "completed": return "Completed";
+      case "pending": return "Pending";
+      case "failed": return "Failed";
+      default: return status;
+    }
+  };
+
   return (
     <DashboardLayout section="user">
       <div className="space-y-6">
@@ -50,16 +60,17 @@ const UserOrders = () => {
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
                 </TableRow>
               ) : orders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No orders yet</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No orders yet</TableCell>
                 </TableRow>
               ) : (
                 orders.map((order) => (
@@ -70,11 +81,22 @@ const UserOrders = () => {
                     <TableCell>${Number(order.amount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className={statusColor(order.status)}>
-                        {order.status}
+                        {statusLabel(order.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(order.created_at), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      {(order.status === "pending" || order.status === "failed") && (
+                        <Button
+                          size="sm"
+                          variant={order.status === "failed" ? "destructive" : "default"}
+                          onClick={() => navigate(`/payment/${order.id}`)}
+                        >
+                          {order.status === "failed" ? "Retry Payment" : "Pay Now"}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
