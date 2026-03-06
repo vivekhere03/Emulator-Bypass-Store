@@ -40,6 +40,8 @@ const OrderSuccess = () => {
     );
   }
 
+  const isCreditPurchase = order?.invoice_data?.type === "credit_purchase";
+
   return (
     <MainLayout>
       <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-4 py-10">
