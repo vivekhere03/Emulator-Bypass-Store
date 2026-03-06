@@ -40,7 +40,7 @@ const Login = () => {
       toast.error(error.message);
     } else {
       toast.success("Logged in successfully");
-      navigate("/dashboard");
+      navigate("/buy-credits");
     }
   };
 
