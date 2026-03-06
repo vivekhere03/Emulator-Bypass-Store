@@ -144,7 +144,7 @@ const UserInvoices = () => {
           <Card className="glass-card overflow-hidden">
             <CardContent className="p-0">
               <Table>
-                 <TableHeader>
+                <TableHeader>
                   <TableRow>
                     <TableHead>Invoice #</TableHead>
                     <TableHead>Item</TableHead>
@@ -171,10 +171,15 @@ const UserInvoices = () => {
                         <TableCell>
                           <Badge variant="secondary" className={
                             order.status === "completed" ? "bg-green-500/10 text-green-500" :
-                            order.status === "failed" ? "bg-destructive/10 text-destructive" :
-                            "bg-yellow-500/10 text-yellow-500"
+                              order.status === "failed" ? "bg-destructive/10 text-destructive" :
+                                order.status === "expired" ? "bg-orange-500/10 text-orange-500" :
+                                  order.status === "cancelled" ? "bg-gray-500/10 text-gray-400" :
+                                    "bg-yellow-500/10 text-yellow-500"
                           }>
-                            {order.status === "completed" ? "Completed" : order.status === "failed" ? "Failed" : "Pending"}
+                            {order.status === "completed" ? "Completed" :
+                              order.status === "failed" ? "Failed" :
+                                order.status === "expired" ? "Expired" :
+                                  order.status === "cancelled" ? "Cancelled" : "Pending"}
                           </Badge>
                         </TableCell>
                         <TableCell>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, CheckCircle2, Copy, Wallet } from "lucide-react";
+import { Shield, CheckCircle2, Copy, Wallet, Clock, XCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import binancePayQr from "@/assets/binance-pay-qr.png";
 import bep20Qr from "@/assets/bep20-qr.jpeg";
 
 const BEP20_ADDRESS = "0xbbf4a99e4ccca52535c2a00e2066e63e6448b1d1";
 const BINANCE_PAY_ID = "892343627";
+const PAYMENT_TIMEOUT_MINUTES = 10;
 
 const Payment = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -23,8 +24,20 @@ const Payment = () => {
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<"binance_pay" | "bep20">("binance_pay");
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [expired, setExpired] = useState(false);
 
   const isCreditPurchase = order?.invoice_data?.type === "credit_purchase";
+
+  const expireOrder = useCallback(async () => {
+    if (!orderId) return;
+    setExpired(true);
+    await supabase
+      .from("orders")
+      .update({ status: "expired" })
+      .eq("id", orderId)
+      .eq("status", "pending");
+  }, [orderId]);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -35,16 +48,85 @@ const Payment = () => {
         .single();
       setOrder(data);
       setLoading(false);
+
+      // Check if order is already expired/failed/completed
+      if (data) {
+        if (data.status === "expired" || data.status === "failed") {
+          setExpired(true);
+        } else if (data.status === "completed") {
+          navigate(`/order-success/${orderId}`);
+          return;
+        }
+
+        // Calculate remaining time from order creation
+        if (data.status === "pending") {
+          const createdAt = new Date(data.created_at).getTime();
+          const expiresAt = createdAt + PAYMENT_TIMEOUT_MINUTES * 60 * 1000;
+          const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+          if (remaining <= 0) {
+            // Already past deadline — expire it
+            setExpired(true);
+            await supabase
+              .from("orders")
+              .update({ status: "expired" })
+              .eq("id", data.id)
+              .eq("status", "pending");
+          } else {
+            setTimeLeft(remaining);
+          }
+        }
+      }
     };
     if (orderId) fetchOrder();
-  }, [orderId]);
+  }, [orderId, navigate]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (timeLeft === null || expired) return;
+    if (timeLeft <= 0) {
+      expireOrder();
+      return;
+    }
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(timer);
+          expireOrder();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft, expired, expireOrder]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied!`);
   };
 
+  const handleCancel = async () => {
+    if (!orderId) return;
+    await supabase
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", orderId)
+      .eq("status", "pending");
+    toast.info("Order cancelled");
+    navigate("/dashboard/orders");
+  };
+
   const handleVerify = async () => {
+    if (expired) {
+      toast.error("This order has expired. Please create a new order.");
+      return;
+    }
     if (!transactionId.trim()) {
       toast.error(
         paymentMethod === "binance_pay"
@@ -65,7 +147,6 @@ const Payment = () => {
       });
 
       if (error) {
-        // Edge function errors put the response body in error.context
         let errorMsg = "Verification failed";
         try {
           if (error.context && typeof error.context === "object") {
@@ -118,6 +199,38 @@ const Payment = () => {
     );
   }
 
+  // Show expired/failed/cancelled state
+  if (expired || order.status === "expired" || order.status === "failed" || order.status === "cancelled") {
+    const statusText = order.status === "cancelled" ? "Cancelled" : order.status === "failed" ? "Failed" : "Expired";
+    return (
+      <MainLayout>
+        <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-4 py-10">
+          <Card className="w-full max-w-md glass-card">
+            <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+              <XCircle className="h-16 w-16 text-destructive" />
+              <h2 className="text-2xl font-bold">Order {statusText}</h2>
+              <p className="text-muted-foreground">
+                {order.status === "failed"
+                  ? "Payment verification failed. Please create a new order and try again."
+                  : order.status === "cancelled"
+                    ? "This order was cancelled. You can create a new order."
+                    : "This payment session has expired. Please create a new order and complete payment within 10 minutes."}
+              </p>
+              <div className="flex gap-3 mt-2">
+                <Button variant="outline" onClick={() => navigate("/dashboard/orders")}>
+                  View Orders
+                </Button>
+                <Button onClick={() => navigate("/")}>
+                  New Order
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-4 py-10">
@@ -128,6 +241,22 @@ const Payment = () => {
             <CardDescription>
               Send the exact amount and verify your payment
             </CardDescription>
+            {/* Countdown Timer */}
+            {timeLeft !== null && (
+              <div className={`mt-3 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${timeLeft <= 300
+                ? "bg-destructive/10 text-destructive"
+                : "bg-yellow-500/10 text-yellow-500"
+                }`}>
+                {timeLeft <= 300 ? (
+                  <AlertTriangle className="h-4 w-4" />
+                ) : (
+                  <Clock className="h-4 w-4" />
+                )}
+                <span>
+                  {timeLeft <= 300 ? "Hurry! " : ""}Time remaining: {formatTime(timeLeft)}
+                </span>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Order Summary */}
@@ -289,23 +418,33 @@ const Payment = () => {
               </p>
             </div>
 
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={handleVerify}
-              disabled={verifying || !transactionId.trim()}
-            >
-              {verifying ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  Verifying...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" /> Verify Payment
-                </>
-              )}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleCancel}
+                className="flex-shrink-0"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleVerify}
+                disabled={verifying || !transactionId.trim()}
+              >
+                {verifying ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Verify Payment
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

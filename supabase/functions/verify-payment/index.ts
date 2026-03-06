@@ -233,6 +233,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check if order is expired or cancelled
+    if (order.status === "expired" || order.status === "cancelled") {
+      return new Response(
+        JSON.stringify({ error: `This order has been ${order.status}. Please create a new order.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Auto-expire orders older than 10 minutes
+    const orderAge = Date.now() - new Date(order.created_at).getTime();
+    if (order.status === "pending" && orderAge > 10 * 60 * 1000) {
+      await adminClient
+        .from("orders")
+        .update({ status: "expired" })
+        .eq("id", order_id);
+      return new Response(
+        JSON.stringify({ error: "This order has expired. Please create a new order." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Allow retry for failed orders — reset to pending
     if (order.status === "failed") {
       await adminClient
