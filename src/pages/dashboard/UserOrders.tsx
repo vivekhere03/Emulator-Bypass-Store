@@ -4,7 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 const UserOrders = () => {
   const { user } = useAuth();
