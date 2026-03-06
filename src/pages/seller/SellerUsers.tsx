@@ -299,8 +299,6 @@ const SellerUsers = () => {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">This will cost {getCreditsForDays(addDays)} credit{getCreditsForDays(addDays) > 1 ? "s" : ""}</p>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <Button onClick={handleAddUser} disabled={actionLoading || creditBalance < getCreditsForDays(addDays)}>
                   {actionLoading ? "Adding..." : <><UserPlus className="mr-2 h-4 w-4" /> Add User ({getCreditsForDays(addDays)} credits)</>}
