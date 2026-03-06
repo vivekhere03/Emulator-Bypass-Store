@@ -132,8 +132,8 @@ Deno.serve(async (req) => {
         const errData = await registerResp.text();
         console.error("Bypass server key registration failed (non-fatal):", errData);
       }
-    } catch (e) {
-      console.error("Bypass server unreachable (non-fatal):", e.message);
+    } catch (e: unknown) {
+      console.error("Bypass server unreachable (non-fatal):", (e as Error).message);
     }
 
     // Return the FULL key — only shown ONCE
@@ -149,9 +149,9 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("generate-api-key error:", err);
-    return new Response(JSON.stringify({ error: err.message || "Internal error" }), {
+    return new Response(JSON.stringify({ error: (err as Error).message || "Internal error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

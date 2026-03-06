@@ -58,7 +58,7 @@ async function getBinancePayTransactions(
     const data = Array.isArray(json) ? json : json.data || [];
     return { success: true, data };
   } catch (e) {
-    return { success: false, error: e.message };
+    return { success: false, error: (e as Error).message };
   }
 }
 
@@ -84,7 +84,7 @@ async function getBep20Deposits(
 
     return { success: true, data: Array.isArray(json) ? json : [] };
   } catch (e) {
-    return { success: false, error: e.message };
+    return { success: false, error: (e as Error).message };
   }
 }
 
@@ -485,7 +485,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("verify-payment error:", err);
-    return new Response(JSON.stringify({ error: err.message || "Verification failed" }), {
+    return new Response(JSON.stringify({ error: (err as Error).message || "Verification failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
