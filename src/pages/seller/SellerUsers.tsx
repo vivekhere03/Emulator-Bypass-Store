@@ -474,21 +474,21 @@ const SellerUsers = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Extend User: {extendDialog.username}</DialogTitle>
-            <DialogDescription>Add more days to this user's subscription (costs 1 credit)</DialogDescription>
+            <DialogDescription>Add more days to this user's subscription (cost varies by duration)</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label>Extend By</Label>
             <Select value={extendDialogDays} onValueChange={setExtendDialogDays}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExtendDialog({ open: false, username: "" })}>Cancel</Button>
-            <Button onClick={handleExtendFromTable} disabled={actionLoading || creditBalance < 1}>
-              {actionLoading ? "Extending..." : "Extend"}
+            <Button onClick={handleExtendFromTable} disabled={actionLoading || creditBalance < getCreditsForDays(extendDialogDays)}>
+              {actionLoading ? "Extending..." : `Extend (${getCreditsForDays(extendDialogDays)} credits)`}
             </Button>
           </DialogFooter>
         </DialogContent>
