@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN download_url text DEFAULT NULL;
