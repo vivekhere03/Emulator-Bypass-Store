@@ -277,7 +277,7 @@ const SellerUsers = () => {
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <UserPlus className="h-5 w-5 text-primary" /> Add New User
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Create a user account (costs 1 credit)</p>
+                <p className="text-sm text-muted-foreground">Create a user account (costs vary by duration)</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -293,14 +293,17 @@ const SellerUsers = () => {
                 <div className="space-y-2">
                   <Label>Duration</Label>
                   <Select value={addDays} onValueChange={setAddDays}>
-                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">This will cost {getCreditsForDays(addDays)} credit{getCreditsForDays(addDays) > 1 ? "s" : ""}</p>
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleAddUser} disabled={actionLoading || creditBalance < 1}>
-                  {actionLoading ? "Adding..." : <><UserPlus className="mr-2 h-4 w-4" /> Add User</>}
+                <Button onClick={handleAddUser} disabled={actionLoading || creditBalance < getCreditsForDays(addDays)}>
+                  {actionLoading ? "Adding..." : <><UserPlus className="mr-2 h-4 w-4" /> Add User ({getCreditsForDays(addDays)} credits)</>}
                 </Button>
               </CardContent>
             </Card>
@@ -312,7 +315,7 @@ const SellerUsers = () => {
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Users className="h-5 w-5 text-primary" /> Bulk Create Users
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Create multiple users with a prefix + random suffix (1 credit each)</p>
+                <p className="text-sm text-muted-foreground">Create multiple users with a prefix + random suffix (credit cost varies by duration)</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
@@ -330,12 +333,14 @@ const SellerUsers = () => {
                     <Select value={bulkDays} onValueChange={setBulkDays}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
                       </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Total: {getCreditsForDays(bulkDays) * (parseInt(bulkCount) || 1)} credits</p>
                     </Select>
                   </div>
                 </div>
-                <Button onClick={handleBulkAdd} disabled={actionLoading || creditBalance < 1}>
+                <Button onClick={handleBulkAdd} disabled={actionLoading || creditBalance < getCreditsForDays(bulkDays)}>
                   {actionLoading ? "Creating..." : <><Users className="mr-2 h-4 w-4" /> Create {bulkCount} Users</>}
                 </Button>
 
