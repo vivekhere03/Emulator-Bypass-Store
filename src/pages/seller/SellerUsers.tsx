@@ -23,15 +23,17 @@ interface ManagedUser {
 }
 
 const DURATION_OPTIONS = [
-  { value: "1", label: "1 Day" },
-  { value: "3", label: "3 Days" },
-  { value: "7", label: "7 Days" },
-  { value: "15", label: "15 Days" },
-  { value: "30", label: "1 Month" },
-  { value: "90", label: "3 Months" },
-  { value: "180", label: "6 Months" },
-  { value: "365", label: "1 Year" },
+  { value: "1", label: "1 Day", credits: 1 },
+  { value: "3", label: "3 Days", credits: 2 },
+  { value: "7", label: "7 Days", credits: 5 },
+  { value: "15", label: "15 Days", credits: 8 },
+  { value: "30", label: "1 Month", credits: 15 },
+  { value: "90", label: "3 Months", credits: 30 },
 ];
+
+function getCreditsForDays(days: string): number {
+  return DURATION_OPTIONS.find(o => o.value === days)?.credits ?? 5;
+}
 
 function generateRandomSuffix(length = 5) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
