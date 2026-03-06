@@ -23,15 +23,17 @@ interface ManagedUser {
 }
 
 const DURATION_OPTIONS = [
-  { value: "1", label: "1 Day" },
-  { value: "3", label: "3 Days" },
-  { value: "7", label: "7 Days" },
-  { value: "15", label: "15 Days" },
-  { value: "30", label: "1 Month" },
-  { value: "90", label: "3 Months" },
-  { value: "180", label: "6 Months" },
-  { value: "365", label: "1 Year" },
+  { value: "1", label: "1 Day", credits: 1 },
+  { value: "3", label: "3 Days", credits: 2 },
+  { value: "7", label: "7 Days", credits: 5 },
+  { value: "15", label: "15 Days", credits: 8 },
+  { value: "30", label: "1 Month", credits: 15 },
+  { value: "90", label: "3 Months", credits: 30 },
 ];
+
+function getCreditsForDays(days: string): number {
+  return DURATION_OPTIONS.find(o => o.value === days)?.credits ?? 5;
+}
 
 function generateRandomSuffix(length = 5) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -171,7 +173,7 @@ const SellerUsers = () => {
       }
       // Re-fetch seller to get updated balance
       await fetchSeller();
-      if ((seller?.credit_balance ?? 0) < 1) break;
+      if ((seller?.credit_balance ?? 0) < getCreditsForDays(bulkDays)) break;
     }
 
     if (created.length > 0) {
@@ -275,7 +277,7 @@ const SellerUsers = () => {
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <UserPlus className="h-5 w-5 text-primary" /> Add New User
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Create a user account (costs 1 credit)</p>
+                <p className="text-sm text-muted-foreground">Create a user account (costs vary by duration)</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -291,14 +293,15 @@ const SellerUsers = () => {
                 <div className="space-y-2">
                   <Label>Duration</Label>
                   <Select value={addDays} onValueChange={setAddDays}>
-                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">This will cost {getCreditsForDays(addDays)} credit{getCreditsForDays(addDays) > 1 ? "s" : ""}</p>
                 </div>
-                <Button onClick={handleAddUser} disabled={actionLoading || creditBalance < 1}>
-                  {actionLoading ? "Adding..." : <><UserPlus className="mr-2 h-4 w-4" /> Add User</>}
+                <Button onClick={handleAddUser} disabled={actionLoading || creditBalance < getCreditsForDays(addDays)}>
+                  {actionLoading ? "Adding..." : <><UserPlus className="mr-2 h-4 w-4" /> Add User ({getCreditsForDays(addDays)} credits)</>}
                 </Button>
               </CardContent>
             </Card>
@@ -310,7 +313,7 @@ const SellerUsers = () => {
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Users className="h-5 w-5 text-primary" /> Bulk Create Users
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Create multiple users with a prefix + random suffix (1 credit each)</p>
+                <p className="text-sm text-muted-foreground">Create multiple users with a prefix + random suffix (credit cost varies by duration)</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
@@ -328,12 +331,13 @@ const SellerUsers = () => {
                     <Select value={bulkDays} onValueChange={setBulkDays}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                        {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">Total: {getCreditsForDays(bulkDays) * (parseInt(bulkCount) || 1)} credits</p>
                   </div>
                 </div>
-                <Button onClick={handleBulkAdd} disabled={actionLoading || creditBalance < 1}>
+                <Button onClick={handleBulkAdd} disabled={actionLoading || creditBalance < getCreditsForDays(bulkDays)}>
                   {actionLoading ? "Creating..." : <><Users className="mr-2 h-4 w-4" /> Create {bulkCount} Users</>}
                 </Button>
 
@@ -470,21 +474,21 @@ const SellerUsers = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Extend User: {extendDialog.username}</DialogTitle>
-            <DialogDescription>Add more days to this user's subscription (costs 1 credit)</DialogDescription>
+            <DialogDescription>Add more days to this user's subscription (cost varies by duration)</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label>Extend By</Label>
             <Select value={extendDialogDays} onValueChange={setExtendDialogDays}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExtendDialog({ open: false, username: "" })}>Cancel</Button>
-            <Button onClick={handleExtendFromTable} disabled={actionLoading || creditBalance < 1}>
-              {actionLoading ? "Extending..." : "Extend"}
+            <Button onClick={handleExtendFromTable} disabled={actionLoading || creditBalance < getCreditsForDays(extendDialogDays)}>
+              {actionLoading ? "Extending..." : `Extend (${getCreditsForDays(extendDialogDays)} credits)`}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -9,6 +9,20 @@ const corsHeaders = {
 const BYPASS_URL = "https://bypass.cgxhub.in";
 const SERVICE_KEY = Deno.env.get("BYPASS_SERVICE_KEY")!;
 
+// Dynamic credit pricing: duration_days -> credits required
+const CREDIT_PRICING: Record<number, number> = {
+  1: 1,
+  3: 2,
+  7: 5,
+  15: 8,
+  30: 15,
+  90: 30,
+};
+
+function getCreditsForDuration(days: number): number | null {
+  return CREDIT_PRICING[days] ?? null;
+}
+
 // Helper: call the bypass server service endpoint
 async function bypassRequest(path: string, body: Record<string, unknown>) {
   const resp = await fetch(`${BYPASS_URL}${path}`, {
@@ -96,21 +110,30 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "list-users": {
-        // List users managed by this seller from bypass server
         const data = await bypassGet(`/api/service/users/list?seller_id=${seller.id}`);
         result = data;
         break;
       }
 
       case "add-user": {
-        if (seller.credit_balance < 1) {
-          return new Response(JSON.stringify({ error: "No credits remaining. Buy more credits." }), {
+        const { username, hwid, duration_days } = body;
+        const days = duration_days || 7;
+        const creditsNeeded = getCreditsForDuration(days);
+
+        if (creditsNeeded === null) {
+          return new Response(JSON.stringify({ error: `Invalid duration: ${days} days. Allowed: 1, 3, 7, 15, 30, 90.` }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (seller.credit_balance < creditsNeeded) {
+          return new Response(JSON.stringify({ error: `Not enough credits. Need ${creditsNeeded}, have ${seller.credit_balance}.` }), {
             status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        const { username, hwid, duration_days } = body;
         if (!username?.trim()) {
           return new Response(JSON.stringify({ error: "Username is required" }), {
             status: 400,
@@ -118,61 +141,66 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Call bypass server
         const data = await bypassRequest("/api/service/users/add", {
           username: username.trim().toLowerCase(),
           hwid: hwid?.trim() || "",
-          duration_days: duration_days || 7,
+          duration_days: days,
           seller_id: seller.id,
         });
 
-        // Deduct credit on portal
         await adminClient
           .from("sellers")
-          .update({ credit_balance: seller.credit_balance - 1 })
+          .update({ credit_balance: seller.credit_balance - creditsNeeded })
           .eq("id", seller.id);
 
-        // Log transaction
         await adminClient.from("credit_transactions").insert({
           seller_id: seller.id,
-          amount: -1,
+          amount: -creditsNeeded,
           type: "add_user",
-          description: `Added user: ${username.trim().toLowerCase()}`,
+          description: `Added user: ${username.trim().toLowerCase()} (${days}d, ${creditsNeeded} credits)`,
         });
 
-        // Sync deduction to bypass server API key
         if (seller.api_key_hash) {
           try {
             await fetch(`${BYPASS_URL}/api/service/keys/deduct-credits`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY },
-              body: JSON.stringify({ seller_id: seller.id, credits: 1 }),
+              body: JSON.stringify({ seller_id: seller.id, credits: creditsNeeded }),
             });
           } catch (_) { /* non-critical */ }
         }
 
-        // Log API usage
         await adminClient.from("api_usage_logs").insert({
           seller_id: seller.id,
           endpoint: "add-user",
-          credits_used: 1,
-          request_body: { username, duration_days },
+          credits_used: creditsNeeded,
+          request_body: { username, duration_days: days },
           response_status: 200,
         });
 
-        result = { ...data, credits_remaining: seller.credit_balance - 1 };
+        result = { ...data, credits_used: creditsNeeded, credits_remaining: seller.credit_balance - creditsNeeded };
         break;
       }
 
       case "extend-user": {
-        if (seller.credit_balance < 1) {
-          return new Response(JSON.stringify({ error: "No credits remaining." }), {
+        const { username, duration_days } = body;
+        const days = duration_days || 7;
+        const creditsNeeded = getCreditsForDuration(days);
+
+        if (creditsNeeded === null) {
+          return new Response(JSON.stringify({ error: `Invalid duration: ${days} days. Allowed: 1, 3, 7, 15, 30, 90.` }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (seller.credit_balance < creditsNeeded) {
+          return new Response(JSON.stringify({ error: `Not enough credits. Need ${creditsNeeded}, have ${seller.credit_balance}.` }), {
             status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        const { username, duration_days } = body;
         if (!username?.trim()) {
           return new Response(JSON.stringify({ error: "Username is required" }), {
             status: 400,
@@ -182,29 +210,28 @@ Deno.serve(async (req) => {
 
         const data = await bypassRequest("/api/service/users/extend", {
           username: username.trim().toLowerCase(),
-          duration_days: duration_days || 7,
+          duration_days: days,
           seller_id: seller.id,
         });
 
         await adminClient
           .from("sellers")
-          .update({ credit_balance: seller.credit_balance - 1 })
+          .update({ credit_balance: seller.credit_balance - creditsNeeded })
           .eq("id", seller.id);
 
         await adminClient.from("credit_transactions").insert({
           seller_id: seller.id,
-          amount: -1,
+          amount: -creditsNeeded,
           type: "extend_user",
-          description: `Extended user: ${username.trim().toLowerCase()} by ${duration_days || 7} days`,
+          description: `Extended user: ${username.trim().toLowerCase()} by ${days} days (${creditsNeeded} credits)`,
         });
 
-        // Sync deduction to bypass server API key
         if (seller.api_key_hash) {
           try {
             await fetch(`${BYPASS_URL}/api/service/keys/deduct-credits`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY },
-              body: JSON.stringify({ seller_id: seller.id, credits: 1 }),
+              body: JSON.stringify({ seller_id: seller.id, credits: creditsNeeded }),
             });
           } catch (_) { /* non-critical */ }
         }
@@ -212,12 +239,12 @@ Deno.serve(async (req) => {
         await adminClient.from("api_usage_logs").insert({
           seller_id: seller.id,
           endpoint: "extend-user",
-          credits_used: 1,
-          request_body: { username, duration_days },
+          credits_used: creditsNeeded,
+          request_body: { username, duration_days: days },
           response_status: 200,
         });
 
-        result = { ...data, credits_remaining: seller.credit_balance - 1 };
+        result = { ...data, credits_used: creditsNeeded, credits_remaining: seller.credit_balance - creditsNeeded };
         break;
       }
 
