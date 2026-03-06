@@ -159,6 +159,13 @@ const Payment = () => {
           errorMsg = error.message || errorMsg;
         }
         toast.error(errorMsg);
+        // Mark order as failed and redirect
+        await supabase
+          .from("orders")
+          .update({ status: "failed" })
+          .eq("id", orderId!)
+          .eq("status", "pending");
+        navigate("/dashboard/orders");
         return;
       }
 
@@ -171,9 +178,23 @@ const Payment = () => {
         navigate(`/order-success/${orderId}`);
       } else {
         toast.error(data?.error || "Payment verification failed");
+        // Mark order as failed and redirect
+        await supabase
+          .from("orders")
+          .update({ status: "failed" })
+          .eq("id", orderId!)
+          .eq("status", "pending");
+        navigate("/dashboard/orders");
       }
     } catch (err: any) {
-      toast.error(err.message || "Verification failed");
+      toast.error((err as Error).message || "Verification failed");
+      // Mark order as failed and redirect
+      await supabase
+        .from("orders")
+        .update({ status: "failed" })
+        .eq("id", orderId!)
+        .eq("status", "pending");
+      navigate("/dashboard/orders");
     }
 
     setVerifying(false);
