@@ -335,7 +335,6 @@ const SellerUsers = () => {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">Total: {getCreditsForDays(bulkDays) * (parseInt(bulkCount) || 1)} credits</p>
-                    </Select>
                   </div>
                 </div>
                 <Button onClick={handleBulkAdd} disabled={actionLoading || creditBalance < getCreditsForDays(bulkDays)}>
