@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "list-users": {
-        const data = await bypassGet(`/api/service/users/list?seller_id=${seller.id}`);
+        const data = await bypassGet(`/api/service/v3/users/list?seller_id=${seller.id}`);
         result = data;
         break;
       }
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        const data = await bypassRequest("/api/service/users/add", {
+        const data = await bypassRequest("/api/service/v3/users/add", {
           username: username.trim().toLowerCase(),
           hwid: hwid?.trim() || "",
           duration_days: days,
@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        const data = await bypassRequest("/api/service/users/extend", {
+        const data = await bypassRequest("/api/service/v3/users/extend", {
           username: username.trim().toLowerCase(),
           duration_days: days,
           seller_id: seller.id,
@@ -257,7 +257,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        const data = await bypassRequest("/api/service/users/reset-hwid", {
+        const data = await bypassRequest("/api/service/v3/users/reset-hwid", {
           username: username.trim().toLowerCase(),
           new_hwid: new_hwid?.trim() || "",
           seller_id: seller.id,
@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        const data = await bypassRequest("/api/service/users/remove", {
+        const data = await bypassRequest("/api/service/v3/users/remove", {
           username: username.trim().toLowerCase(),
           seller_id: seller.id,
         });
@@ -310,7 +310,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        const data = await bypassRequest("/api/service/users/reduce", {
+        const data = await bypassRequest("/api/service/v3/users/reduce", {
           username: username.trim().toLowerCase(),
           duration_days: duration_days || 7,
           seller_id: seller.id,
