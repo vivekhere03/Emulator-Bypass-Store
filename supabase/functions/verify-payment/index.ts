@@ -233,6 +233,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Allow retry for failed orders — reset to pending
+    if (order.status === "failed") {
+      await adminClient
+        .from("orders")
+        .update({ status: "pending" })
+        .eq("id", order_id);
+    }
+
     // Check for duplicate transaction ID
     const { data: existing } = await adminClient
       .from("orders")
@@ -295,6 +303,12 @@ Deno.serve(async (req) => {
     }
 
     if (!verifyResult.success) {
+      // Update order status to failed
+      await adminClient
+        .from("orders")
+        .update({ status: "failed", transaction_id: transaction_id })
+        .eq("id", order_id);
+
       return new Response(
         JSON.stringify({ success: false, error: verifyResult.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
