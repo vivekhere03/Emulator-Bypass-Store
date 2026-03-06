@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FileText, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 
 const UserInvoices = () => {
   const { user } = useAuth();
@@ -30,57 +31,99 @@ const UserInvoices = () => {
 
   const downloadInvoice = (order: any) => {
     const isCreditPurchase = order.invoice_data?.type === "credit_purchase";
+    const invoiceNum = `INV-${order.id.slice(0, 8).toUpperCase()}`;
+    const dateStr = new Date(order.created_at).toLocaleDateString("en-US", {
+      year: "numeric", month: "long", day: "numeric",
+    });
 
-    const lines = [
-      "═══════════════════════════════════════",
-      "               INVOICE                 ",
-      "═══════════════════════════════════════",
-      "",
-      `Invoice #: INV-${order.id.slice(0, 8).toUpperCase()}`,
-      `Date: ${new Date(order.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`,
-      "",
-      "───────────────────────────────────────",
-      "  Item Details",
-      "───────────────────────────────────────",
-    ];
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", pageWidth / 2, 30, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("CGX Hub • cgxhub.in", pageWidth / 2, 38, { align: "center" });
+
+    // Line separator
+    doc.setDrawColor(200);
+    doc.line(20, 44, pageWidth - 20, 44);
+
+    // Invoice details
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(invoiceNum, 20, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(dateStr, pageWidth - 20, 55, { align: "right" });
+
+    // Item details section
+    let y = 72;
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Item Details", 20, y);
+    y += 4;
+    doc.setDrawColor(220);
+    doc.line(20, y, pageWidth - 20, y);
+    y += 10;
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+
+    const addRow = (label: string, value: string) => {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100);
+      doc.text(label, 25, y);
+      doc.setTextColor(0);
+      doc.setFont("helvetica", "bold");
+      doc.text(value, pageWidth - 25, y, { align: "right" });
+      y += 9;
+    };
 
     if (isCreditPurchase) {
-      lines.push(
-        `  Package: ${order.invoice_data.package_name}`,
-        `  Credits: ${order.invoice_data.credits}`,
-        `  Type: Credit Purchase`,
-      );
+      addRow("Package", order.invoice_data.package_name || "N/A");
+      addRow("Credits", `${order.invoice_data.credits} credits`);
+      addRow("Type", "Credit Purchase");
     } else {
-      lines.push(
-        `  Product: ${order.products?.name || "N/A"}`,
-        `  Duration: ${order.product_durations?.duration_label || "N/A"}`,
-        `  Username: ${order.username_created || "N/A"}`,
-      );
+      addRow("Product", order.products?.name || "N/A");
+      addRow("Duration", order.product_durations?.duration_label || "N/A");
+      addRow("Username", order.username_created || "N/A");
     }
 
-    lines.push(
-      "",
-      "───────────────────────────────────────",
-      `  Amount Paid: $${Number(order.amount).toFixed(2)} USDT`,
-      `  Payment Method: Crypto (Binance)`,
-      `  Transaction ID: ${order.transaction_id || "N/A"}`,
-      `  Status: Completed`,
-      "",
-      "═══════════════════════════════════════",
-      "  Thank you for your purchase!",
-      "  CGX Hub - cgxhub.in",
-      "═══════════════════════════════════════",
-    );
+    // Payment section
+    y += 4;
+    doc.setDrawColor(220);
+    doc.line(20, y, pageWidth - 20, y);
+    y += 12;
 
-    const text = lines.join("\n");
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invoice-${order.id.slice(0, 8)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Invoice downloaded!");
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text("Payment Details", 20, y);
+    y += 14;
+
+    doc.setFontSize(11);
+    addRow("Amount Paid", `$${Number(order.amount).toFixed(2)} USDT`);
+    addRow("Payment Method", "Crypto (Binance)");
+    addRow("Transaction ID", order.transaction_id || "N/A");
+    addRow("Status", "Completed");
+
+    // Footer
+    y += 8;
+    doc.setDrawColor(200);
+    doc.line(20, y, pageWidth - 20, y);
+    y += 12;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("Thank you for your purchase!", pageWidth / 2, y, { align: "center" });
+
+    doc.save(`${invoiceNum}.pdf`);
+    toast.success("Invoice PDF downloaded!");
   };
 
   return (
