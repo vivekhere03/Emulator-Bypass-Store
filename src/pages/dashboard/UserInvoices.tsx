@@ -21,7 +21,6 @@ const UserInvoices = () => {
         .from("orders")
         .select("*, products(name), product_durations(duration_label, duration_days)")
         .eq("user_id", user.id)
-        .eq("status", "completed")
         .order("created_at", { ascending: false });
       setOrders(data ?? []);
       setLoading(false);
@@ -138,17 +137,18 @@ const UserInvoices = () => {
         ) : orders.length === 0 ? (
           <div className="glass-card flex flex-col items-center justify-center rounded-xl p-16">
             <FileText className="mb-4 h-12 w-12 text-muted-foreground/30" />
-            <p className="text-muted-foreground">Invoices will appear here after completed purchases</p>
+            <p className="text-muted-foreground">Invoices will appear here after purchases</p>
           </div>
         ) : (
           <Card className="glass-card overflow-hidden">
             <CardContent className="p-0">
               <Table>
-                <TableHeader>
+                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice #</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
@@ -168,16 +168,27 @@ const UserInvoices = () => {
                         </TableCell>
                         <TableCell>${Number(order.amount).toFixed(2)}</TableCell>
                         <TableCell>
+                          <Badge variant="secondary" className={
+                            order.status === "completed" ? "bg-green-500/10 text-green-500" :
+                            order.status === "failed" ? "bg-destructive/10 text-destructive" :
+                            "bg-yellow-500/10 text-yellow-500"
+                          }>
+                            {order.status === "completed" ? "Completed" : order.status === "failed" ? "Failed" : "Pending"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           {new Date(order.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => downloadInvoice(order)}
-                          >
-                            <Download className="mr-1 h-4 w-4" /> Download
-                          </Button>
+                          {order.status === "completed" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadInvoice(order)}
+                            >
+                              <Download className="mr-1 h-4 w-4" /> Download
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );

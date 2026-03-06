@@ -23,7 +23,17 @@ const AdminOrders = () => {
     switch (status) {
       case "completed": return "bg-green-500/10 text-green-500";
       case "pending": return "bg-yellow-500/10 text-yellow-500";
-      default: return "bg-destructive/10 text-destructive";
+      case "failed": return "bg-destructive/10 text-destructive";
+      default: return "";
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "completed": return "Completed";
+      case "pending": return "Pending";
+      case "failed": return "Failed";
+      default: return status;
     }
   };
 
@@ -53,7 +63,7 @@ const AdminOrders = () => {
                   <TableCell className="font-mono text-sm">{o.username_created || "—"}</TableCell>
                   <TableCell>${Number(o.amount).toFixed(2)}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={statusColor(o.status)}>{o.status}</Badge>
+                    <Badge variant="secondary" className={statusColor(o.status)}>{statusLabel(o.status)}</Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {format(new Date(o.created_at), "MMM dd, yyyy")}
