@@ -180,13 +180,7 @@ const Payment = () => {
           errorMsg = error.message || errorMsg;
         }
         toast.error(errorMsg);
-        // Mark order as failed and redirect
-        await supabase
-          .from("orders")
-          .update({ status: "failed" })
-          .eq("id", orderId!)
-          .eq("status", "pending");
-        navigate("/buy-credits");
+        setVerifying(false);
         return;
       }
 
@@ -198,24 +192,10 @@ const Payment = () => {
         );
         navigate(`/order-success/${orderId}`);
       } else {
-        toast.error(data?.error || "Payment verification failed");
-        // Mark order as failed and redirect
-        await supabase
-          .from("orders")
-          .update({ status: "failed" })
-          .eq("id", orderId!)
-          .eq("status", "pending");
-        navigate("/buy-credits");
+        toast.error(data?.error || "Payment verification failed. Please check UTR/TxID and try again.");
       }
     } catch (err: any) {
-      toast.error((err as Error).message || "Verification failed");
-      // Mark order as failed and redirect
-      await supabase
-        .from("orders")
-        .update({ status: "failed" })
-        .eq("id", orderId!)
-        .eq("status", "pending");
-      navigate("/buy-credits");
+      toast.error((err as Error).message || "Verification request failed. Try again.");
     }
 
     setVerifying(false);
