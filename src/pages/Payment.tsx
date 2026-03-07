@@ -27,6 +27,7 @@ const Payment = () => {
   const [paymentMethod, setPaymentMethod] = useState<"binance_pay" | "bep20" | "upi">("upi");
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [expired, setExpired] = useState(false);
+  const [inrAmount, setInrAmount] = useState<number>(0);
 
   const isCreditPurchase = order?.invoice_data?.type === "credit_purchase";
 
@@ -49,6 +50,23 @@ const Payment = () => {
         .single();
       setOrder(data);
       setLoading(false);
+
+      // Fetch INR price from credit package if this is a credit purchase
+      const invoiceData = (data as any)?.invoice_data;
+      if (invoiceData?.type === "credit_purchase" && invoiceData?.package_id) {
+        const { data: pkg } = await supabase
+          .from("credit_packages")
+          .select("*")
+          .eq("id", invoiceData.package_id)
+          .single();
+        if ((pkg as any)?.price_inr) {
+          setInrAmount(Number((pkg as any).price_inr));
+        } else {
+          setInrAmount(Math.ceil(Number(data.amount) * 90));
+        }
+      } else {
+        setInrAmount(Math.ceil(Number(data?.amount || 0) * 90));
+      }
 
       // Check if order is already expired/failed/completed
       if (data) {
@@ -345,7 +363,7 @@ const Payment = () => {
                 <div className="flex flex-col items-center gap-3">
                   <div className="rounded-xl border border-border p-4 bg-white">
                     <QRCode
-                      value={`upi://pay?pa=cgxvivek@ptyes&pn=CGX%20Store&am=${Math.ceil(Number(order.amount) * 90)}&tr=${order.id}&tn=Order%20${order.id}`}
+                      value={`upi://pay?pa=cgxvivek@ptyes&pn=CGX%20Store&am=${inrAmount}&tr=${order.id}&tn=Order%20${order.id}`}
                       size={180}
                       level="H"
                     />
@@ -373,7 +391,7 @@ const Payment = () => {
                   <p className="text-sm text-muted-foreground">
                     Send exactly{" "}
                     <strong className="text-foreground">
-                      ₹{Math.ceil(Number(order.amount) * 90)}
+                      ₹{inrAmount}
                     </strong>{" "}
                     via UPI
                   </p>

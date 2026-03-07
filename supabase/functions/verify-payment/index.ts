@@ -302,8 +302,19 @@ Deno.serve(async (req) => {
     let verifyResult: { success: boolean; message: string };
 
     if (payment_type === "upi") {
-      const UPI_RATE = 90; // Fixed conversion rate: 1 USDT = 90 INR
-      const inrAmount = expectedAmount * UPI_RATE;
+      // Fetch INR price from credit package if available, otherwise fallback to rate
+      let inrAmount = expectedAmount * 90; // default fallback
+      const invoiceData = order.invoice_data as any;
+      if (invoiceData?.type === "credit_purchase" && invoiceData?.package_id) {
+        const { data: pkg } = await adminClient
+          .from("credit_packages")
+          .select("*")
+          .eq("id", invoiceData.package_id)
+          .single();
+        if (pkg && (pkg as any).price_inr) {
+          inrAmount = Number((pkg as any).price_inr);
+        }
+      }
       const utrParam = encodeURIComponent(transaction_id.trim());
       const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY") || "CGXVIVEK&ISHITAdsfsdkfjh453590awdad$$#$#@$%";
 

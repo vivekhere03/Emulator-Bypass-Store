@@ -51,11 +51,7 @@ const Navbar = () => {
                   </Link>
                 </Button>
               )}
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/dashboard">
-                  <User className="mr-1.5 h-4 w-4" /> Dashboard
-                </Link>
-              </Button>
+
               <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="mr-1.5 h-4 w-4" /> Sign Out
               </Button>
@@ -104,9 +100,7 @@ const Navbar = () => {
                   <Link to="/admin">Admin</Link>
                 </Button>
               )}
-              <Button variant="ghost" size="sm" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
+
               <Button variant="outline" size="sm" onClick={() => { handleSignOut(); setMobileOpen(false); }}>
                 Sign Out
               </Button>
