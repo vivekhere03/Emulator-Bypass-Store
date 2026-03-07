@@ -204,7 +204,9 @@ const SellerApiKey = () => {
             <div>
               <h3 className="mb-2 font-semibold text-foreground">Authentication</h3>
               <p className="mb-3 text-sm text-muted-foreground">
-                Every request must include 3 headers. Requests are HMAC-SHA256 signed with a 30-second replay window.
+                Every request must include 4 headers. Requests are HMAC-SHA256 signed with a 30-second replay window.
+                <br />
+                <strong>Important:</strong> You must include a <code>User-Agent</code> header, or Cloudflare WAF will block your request with a 403 Forbidden error.
               </p>
               <div className="overflow-x-auto rounded-lg border border-border/50">
                 <table className="w-full text-xs">
@@ -226,6 +228,10 @@ const SellerApiKey = () => {
                     <tr className="border-t border-border/30">
                       <td className="p-2 font-mono text-foreground">X-Api-Signature</td>
                       <td className="p-2 font-mono text-muted-foreground">HMAC-SHA256 hex</td>
+                    </tr>
+                    <tr className="border-t border-border/30">
+                      <td className="p-2 font-mono text-foreground">User-Agent</td>
+                      <td className="p-2 font-mono text-muted-foreground">e.g., Mozilla/5.0</td>
                     </tr>
                   </tbody>
                 </table>
@@ -309,11 +315,10 @@ const SellerApiKey = () => {
                   >
                     <div className="flex items-center gap-2">
                       <span
-                        className={`rounded px-1.5 py-0.5 text-xs font-bold ${
-                          ep.method === "GET"
+                        className={`rounded px-1.5 py-0.5 text-xs font-bold ${ep.method === "GET"
                             ? "bg-primary/10 text-primary"
                             : "bg-accent/10 text-accent-foreground"
-                        }`}
+                          }`}
                       >
                         {ep.method}
                       </span>
