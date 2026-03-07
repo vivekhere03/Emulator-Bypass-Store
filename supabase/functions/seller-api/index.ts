@@ -35,11 +35,12 @@ async function getMonthlyCreditsRequired(
 ): Promise<number> {
   const { data } = await adminClient
     .from("site_settings")
-    .select("value")
+    .select("value,updated_at")
     .eq("key", "seller_user_monthly_credits")
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
 
-  const parsed = Number.parseInt(data?.value ?? "", 10);
+  const parsed = Number.parseInt(data?.[0]?.value ?? "", 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return DEFAULT_MONTHLY_CREDITS_REQUIRED;
   }
@@ -168,6 +169,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const monthlyCreditsRequired = await getMonthlyCreditsRequired(adminClient);
 
     const body = req.method === "POST" ? await req.json() : {};
     const url = new URL(req.url);
@@ -199,7 +201,7 @@ Deno.serve(async (req) => {
           });
         }
         const days = SELLER_USER_DURATION_DAYS;
-        const creditsNeeded = await getMonthlyCreditsRequired(adminClient);
+        const creditsNeeded = monthlyCreditsRequired;
 
         if (seller.credit_balance < creditsNeeded) {
           return new Response(JSON.stringify({ error: `Not enough credits. Need ${creditsNeeded}, have ${seller.credit_balance}.` }), {
@@ -275,7 +277,7 @@ Deno.serve(async (req) => {
           });
         }
         const days = SELLER_USER_DURATION_DAYS;
-        const creditsNeeded = await getMonthlyCreditsRequired(adminClient);
+        const creditsNeeded = monthlyCreditsRequired;
 
         if (seller.credit_balance < creditsNeeded) {
           return new Response(JSON.stringify({ error: `Not enough credits. Need ${creditsNeeded}, have ${seller.credit_balance}.` }), {
@@ -427,7 +429,11 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify({ ...result, policy_notice: POLICY_NOTICE }), {
+    return new Response(JSON.stringify({
+      ...result,
+      monthly_credits_required: monthlyCreditsRequired,
+      policy_notice: POLICY_NOTICE,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {

@@ -30,6 +30,11 @@ function getCreditsForDays(days: string, monthlyCredits: number): number {
   return days === "30" ? monthlyCredits : monthlyCredits;
 }
 
+function parseMonthlyCredits(value: unknown): number | null {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function generateRandomSuffix(length = 5) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
@@ -76,16 +81,6 @@ const SellerUsers = () => {
     setSeller(data);
   }, [user]);
 
-  const fetchCreditSetting = useCallback(async () => {
-    const { data } = await supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "seller_user_monthly_credits")
-      .maybeSingle();
-    const parsed = Number.parseInt(data?.value ?? "", 10);
-    setMonthlyCreditsRequired(Number.isFinite(parsed) && parsed > 0 ? parsed : 15);
-  }, []);
-
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -100,6 +95,10 @@ const SellerUsers = () => {
         }
       );
       const result = await resp.json();
+      const apiMonthlyCredits = parseMonthlyCredits(result?.monthly_credits_required);
+      if (apiMonthlyCredits !== null) {
+        setMonthlyCreditsRequired(apiMonthlyCredits);
+      }
       if (resp.ok && result.users) setUsers(result.users);
     } catch (err: any) {
       console.error("Failed to fetch users:", err);
@@ -110,8 +109,7 @@ const SellerUsers = () => {
   useEffect(() => {
     fetchSeller();
     fetchUsers();
-    fetchCreditSetting();
-  }, [fetchSeller, fetchUsers, fetchCreditSetting]);
+  }, [fetchSeller, fetchUsers]);
 
   const callSellerApi = async (action: string, body: Record<string, unknown>) => {
     setActionLoading(true);
@@ -130,6 +128,10 @@ const SellerUsers = () => {
         }
       );
       const data = await resp.json();
+      const apiMonthlyCredits = parseMonthlyCredits(data?.monthly_credits_required);
+      if (apiMonthlyCredits !== null) {
+        setMonthlyCreditsRequired(apiMonthlyCredits);
+      }
       if (!resp.ok) {
         toast.error(data.error || `Action failed`);
         setActionLoading(false);
