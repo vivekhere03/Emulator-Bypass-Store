@@ -168,13 +168,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Deno environment auto-injects SUPABASE_URL and SUPABASE_ANON_KEY 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("ANON_KEY") ?? "";
+
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
+    const token = authHeader.split(" ")[1];
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
