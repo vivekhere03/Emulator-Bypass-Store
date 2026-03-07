@@ -49,7 +49,7 @@ const SellerUsers = () => {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("add");
-  const [monthlyCreditsRequired, setMonthlyCreditsRequired] = useState(15);
+  const [monthlyCreditsRequired, setMonthlyCreditsRequired] = useState(1);
 
   // Add single user
   const [addUsername, setAddUsername] = useState("");
