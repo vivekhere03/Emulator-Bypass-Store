@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
         }
       }
       const utrParam = encodeURIComponent(transaction_id.trim());
-      const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY");
+      const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY") || "CGXVIVEK&ISHITAdsfsdkfjh453590awdad$$#$#@$%";
       if (!vpsServiceKey) {
         return new Response(
           JSON.stringify({ error: "UPI verification service key is not configured" }),
