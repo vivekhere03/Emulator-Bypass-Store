@@ -168,9 +168,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Deno environment auto-injects SUPABASE_URL and SUPABASE_ANON_KEY 
-    const supabaseUrl = Deno.env.get("SUPA_URL") ?? Deno.env.get("URL") ?? "";
-    const supabaseAnonKey = Deno.env.get("SUPA_ANON_KEY") ?? Deno.env.get("ANON_KEY") ?? "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return new Response(JSON.stringify({ error: "Supabase environment is not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabase = createClient(
       supabaseUrl,
@@ -284,7 +289,7 @@ Deno.serve(async (req) => {
       .from("orders")
       .select("id")
       .eq("transaction_id", normalizedTransactionId)
-      // .eq("status", "completed")
+      .eq("status", "completed")
       .neq("id", order_id);
 
     if (existing && existing.length > 0) {
@@ -295,17 +300,6 @@ Deno.serve(async (req) => {
     }
 
     // ── Real Binance API verification ───────────────────────────
-    const BINANCE_API_KEY = Deno.env.get("BINANCE_API_KEY");
-    const BINANCE_SECRET_KEY = Deno.env.get("BINANCE_SECRET_KEY");
-
-    if (!BINANCE_API_KEY || !BINANCE_SECRET_KEY) {
-      console.error("Missing BINANCE_API_KEY or BINANCE_SECRET_KEY");
-      return new Response(
-        JSON.stringify({ error: "Payment verification not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // SECURITY: Always use the server-side order amount, never trust client-provided amount
     const expectedAmount = parseFloat(order.amount);
     if (isNaN(expectedAmount) || expectedAmount <= 0) {
@@ -376,6 +370,15 @@ Deno.serve(async (req) => {
         );
       }
     } else if (payment_type === "binance_pay") {
+      const BINANCE_API_KEY = Deno.env.get("BINANCE_API_KEY");
+      const BINANCE_SECRET_KEY = Deno.env.get("BINANCE_SECRET_KEY");
+      if (!BINANCE_API_KEY || !BINANCE_SECRET_KEY) {
+        return new Response(
+          JSON.stringify({ error: "Binance payment verification is not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const txResult = await getBinancePayTransactions(BINANCE_API_KEY, BINANCE_SECRET_KEY);
       if (!txResult.success) {
         console.error("Binance Pay API error:", txResult.error);
@@ -386,6 +389,15 @@ Deno.serve(async (req) => {
       }
       verifyResult = verifyBinancePayTx(txResult.data!, normalizedTransactionId, expectedAmount, TIME_WINDOW_HOURS);
     } else {
+      const BINANCE_API_KEY = Deno.env.get("BINANCE_API_KEY");
+      const BINANCE_SECRET_KEY = Deno.env.get("BINANCE_SECRET_KEY");
+      if (!BINANCE_API_KEY || !BINANCE_SECRET_KEY) {
+        return new Response(
+          JSON.stringify({ error: "BEP20 verification is not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const txResult = await getBep20Deposits(BINANCE_API_KEY, BINANCE_SECRET_KEY);
       if (!txResult.success) {
         console.error("BEP20 API error:", txResult.error);
@@ -408,14 +420,29 @@ Deno.serve(async (req) => {
 
     // ── Payment verified — process the order ────────────────────
 
-    // Update order status
-    await adminClient
+    // Update order status atomically to prevent double-processing on repeated clicks/race
+    const { data: updatedOrder, error: updateErr } = await adminClient
       .from("orders")
       .update({
         status: "completed",
         transaction_id: normalizedTransactionId,
       })
-      .eq("id", order_id);
+      .eq("id", order_id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+
+    if (updateErr) {
+      return new Response(JSON.stringify({ error: "Failed to finalize order" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!updatedOrder) {
+      return new Response(JSON.stringify({ success: true, message: "Already verified" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // ── Send Discord webhook notification ───────────────────────
     const DISCORD_WEBHOOK = Deno.env.get("DISCORD_WEBHOOK_URL");
@@ -427,7 +454,7 @@ Deno.serve(async (req) => {
         color: embedColor,
         fields: [
           { name: "💰 Amount", value: `${expectedAmount} USDT`, inline: true },
-          { name: "📋 Method", value: payment_type === "binance_pay" ? "Binance Pay" : "BEP20 (USDT)", inline: true },
+          { name: "📋 Method", value: payment_type === "upi" ? "UPI" : payment_type === "binance_pay" ? "Binance Pay" : "BEP20 (USDT)", inline: true },
           { name: "🔑 Transaction ID", value: `\`${normalizedTransactionId}\``, inline: false },
           { name: "📦 Order ID", value: `\`${order_id}\``, inline: false },
         ],
