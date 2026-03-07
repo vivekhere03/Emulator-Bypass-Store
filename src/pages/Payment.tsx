@@ -208,6 +208,15 @@ const Payment = () => {
         error = retry.error;
       }
 
+      const stillInvalidJwt = `${error?.message ?? ""}`.toLowerCase().includes("invalid jwt");
+      if (stillInvalidJwt) {
+        await supabase.auth.signOut();
+        toast.error("Session is invalid. Please sign in again.");
+        navigate("/login");
+        setVerifying(false);
+        return;
+      }
+
       if (error) {
         let errorMsg = "Verification failed";
         try {
@@ -284,7 +293,7 @@ const Payment = () => {
     const statusText = order.status === "cancelled" ? "Cancelled" : order.status === "failed" ? "Failed" : "Expired";
     return (
       <MainLayout>
-        <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-4 py-10">
+        <div className="container mx-auto flex min-h-[70vh] items-start justify-center px-3 py-6 sm:items-center sm:px-4 sm:py-10">
           <Card className="w-full max-w-md glass-card">
             <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
               <XCircle className="h-16 w-16 text-destructive" />
@@ -313,8 +322,8 @@ const Payment = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-3 py-6 sm:px-4 sm:py-10">
-        <Card className="w-full max-w-lg glass-card">
+      <div className="container mx-auto flex min-h-[70vh] items-start justify-center px-3 py-6 sm:items-center sm:px-4 sm:py-10">
+        <Card className="mt-2 w-full max-w-lg glass-card sm:mt-0">
           <CardHeader className="text-center">
             <Shield className="mx-auto mb-2 h-10 w-10 text-primary" />
             <CardTitle className="text-2xl">Complete Payment</CardTitle>
@@ -384,15 +393,20 @@ const Payment = () => {
                 setTransactionId("");
               }}
             >
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger value="upi">
-                  <QrCode className="mr-1.5 h-4 w-4 hidden sm:inline" /> UPI
+              <TabsList className="grid w-full grid-cols-3 gap-1">
+                <TabsTrigger value="upi" className="px-2 text-xs sm:text-sm">
+                  <QrCode className="mr-1.5 h-4 w-4 hidden sm:inline" />
+                  <span>UPI</span>
                 </TabsTrigger>
-                <TabsTrigger value="binance_pay">
-                  <Wallet className="mr-1.5 h-4 w-4 hidden sm:inline" /> Binance Pay
+                <TabsTrigger value="binance_pay" className="px-2 text-xs sm:text-sm">
+                  <Wallet className="mr-1.5 h-4 w-4 hidden sm:inline" />
+                  <span className="sm:hidden">Binance</span>
+                  <span className="hidden sm:inline">Binance Pay</span>
                 </TabsTrigger>
-                <TabsTrigger value="bep20">
-                  <Shield className="mr-1.5 h-4 w-4 hidden sm:inline" /> BEP20 (USDT)
+                <TabsTrigger value="bep20" className="px-2 text-xs sm:text-sm">
+                  <Shield className="mr-1.5 h-4 w-4 hidden sm:inline" />
+                  <span className="sm:hidden">BEP20</span>
+                  <span className="hidden sm:inline">BEP20 (USDT)</span>
                 </TabsTrigger>
               </TabsList>
 
