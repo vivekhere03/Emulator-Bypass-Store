@@ -120,7 +120,7 @@ const Payment = () => {
       .eq("id", orderId)
       .eq("status", "pending");
     toast.info("Order cancelled");
-    navigate("/dashboard/orders");
+    navigate("/buy-credits");
   };
 
   const handleVerify = async () => {
@@ -168,7 +168,7 @@ const Payment = () => {
           .update({ status: "failed" })
           .eq("id", orderId!)
           .eq("status", "pending");
-        navigate("/dashboard/orders");
+        navigate("/buy-credits");
         return;
       }
 
@@ -187,7 +187,7 @@ const Payment = () => {
           .update({ status: "failed" })
           .eq("id", orderId!)
           .eq("status", "pending");
-        navigate("/dashboard/orders");
+        navigate("/buy-credits");
       }
     } catch (err: any) {
       toast.error((err as Error).message || "Verification failed");
@@ -197,7 +197,7 @@ const Payment = () => {
         .update({ status: "failed" })
         .eq("id", orderId!)
         .eq("status", "pending");
-      navigate("/dashboard/orders");
+      navigate("/buy-credits");
     }
 
     setVerifying(false);
@@ -241,7 +241,7 @@ const Payment = () => {
                     : "This payment session has expired. Please create a new order and complete payment within 10 minutes."}
               </p>
               <div className="flex gap-3 mt-2">
-                <Button variant="outline" onClick={() => navigate("/dashboard/orders")}>
+                <Button variant="outline" onClick={() => navigate("/buy-credits")}>
                   View Orders
                 </Button>
                 <Button onClick={() => navigate("/")}>
