@@ -160,12 +160,7 @@ const Payment = () => {
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      let accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
-        const { data: refreshed } = await supabase.auth.refreshSession();
-        accessToken = refreshed.session?.access_token;
-      }
-      if (!accessToken) {
+      if (!sessionData.session) {
         toast.error("Session expired. Please sign in again.");
         navigate("/login");
         setVerifying(false);
@@ -173,9 +168,6 @@ const Payment = () => {
       }
 
       let { data, error } = await supabase.functions.invoke("verify-payment", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: {
           order_id: orderId,
           transaction_id: transactionId.trim(),
@@ -185,9 +177,8 @@ const Payment = () => {
 
       const maybeInvalidJwt = `${error?.message ?? ""}`.toLowerCase().includes("invalid jwt");
       if (maybeInvalidJwt) {
-        const { data: refreshed } = await supabase.auth.refreshSession();
-        const retryToken = refreshed.session?.access_token;
-        if (!retryToken) {
+        const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+        if (refreshErr || !refreshed.session) {
           toast.error("Session expired. Please sign in again.");
           navigate("/login");
           setVerifying(false);
@@ -195,9 +186,6 @@ const Payment = () => {
         }
 
         const retry = await supabase.functions.invoke("verify-payment", {
-          headers: {
-            Authorization: `Bearer ${retryToken}`,
-          },
           body: {
             order_id: orderId,
             transaction_id: transactionId.trim(),
