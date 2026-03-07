@@ -159,31 +159,24 @@ const Payment = () => {
     setVerifying(true);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        toast.error("Session expired. Please sign in again.");
-        navigate("/login");
-        setVerifying(false);
-        return;
-      }
-
-      const { data: userData, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userData.user) {
-        const { data: refreshed } = await supabase.auth.refreshSession();
-        if (!refreshed.session) {
-          await supabase.auth.signOut();
-          toast.error("Session is invalid. Please sign in again.");
-          navigate("/login");
-          setVerifying(false);
-          return;
+      const getAccessToken = async (): Promise<string | null> => {
+        const { data: currentSession } = await supabase.auth.getSession();
+        if (currentSession.session?.access_token) {
+          return currentSession.session.access_token;
         }
-      }
 
-      const { data: validatedSession } = await supabase.auth.getSession();
-      const accessToken = validatedSession.session?.access_token;
+        const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+        if (refreshErr || !refreshed.session?.access_token) {
+          return null;
+        }
+
+        return refreshed.session.access_token;
+      };
+
+      let accessToken = await getAccessToken();
       if (!accessToken) {
         await supabase.auth.signOut();
-        toast.error("Session is invalid. Please sign in again.");
+        toast.error("Session expired. Please sign in again.", { id: "session-expired" });
         navigate("/login");
         setVerifying(false);
         return;
@@ -217,25 +210,25 @@ const Payment = () => {
       };
 
       let verifyResp = await invokeVerify(accessToken);
-      const firstMsg = `${verifyResp.payload?.message ?? verifyResp.payload?.error ?? ""}`;
-      const maybeInvalidJwt = verifyResp.status === 401 && firstMsg.toLowerCase().includes("invalid jwt");
-      if (maybeInvalidJwt) {
+
+      if (verifyResp.status === 401) {
         const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-        if (refreshErr || !refreshed.session) {
-          toast.error("Session expired. Please sign in again.");
+        accessToken = refreshed.session?.access_token ?? null;
+
+        if (refreshErr || !accessToken) {
+          await supabase.auth.signOut();
+          toast.error("Session expired. Please sign in again.", { id: "session-expired" });
           navigate("/login");
           setVerifying(false);
           return;
         }
 
-        verifyResp = await invokeVerify(refreshed.session.access_token);
+        verifyResp = await invokeVerify(accessToken);
       }
 
-      const secondMsg = `${verifyResp.payload?.message ?? verifyResp.payload?.error ?? ""}`;
-      const stillInvalidJwt = verifyResp.status === 401 && secondMsg.toLowerCase().includes("invalid jwt");
-      if (stillInvalidJwt) {
+      if (verifyResp.status === 401) {
         await supabase.auth.signOut();
-        toast.error("Session is invalid. Please sign in again.");
+        toast.error("Session is invalid. Please sign in again.", { id: "session-invalid" });
         navigate("/login");
         setVerifying(false);
         return;
