@@ -383,8 +383,8 @@ Deno.serve(async (req) => {
       // Return the specific verification error (e.g., "Already used") to the frontend
       // without failing the whole order so the user can try again!
       return new Response(
-        JSON.stringify({ error: verifyResult.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: verifyResult.message }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
