@@ -125,9 +125,43 @@ const Payment = () => {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const shortOrderId = (id?: string) => {
+    if (!id) return "";
+    return `${id.slice(0, 8)}...${id.slice(-6)}`;
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied!`);
+  };
+
+  const buildVerifyErrorMessage = (payload: any) => {
+    const raw = `${payload?.error ?? payload?.message ?? ""}`.trim();
+    const lower = raw.toLowerCase();
+
+    if (payload?.code === "DUPLICATE_TRANSACTION" && payload?.conflicting_order_id) {
+      if (paymentMethod === "upi") {
+        return `This UTR is already used in your order ${shortOrderId(payload.conflicting_order_id)}.`;
+      }
+      return `This transaction ID is already used in your order ${shortOrderId(payload.conflicting_order_id)}.`;
+    }
+
+    if (lower.includes("already been used")) {
+      if (paymentMethod === "upi") {
+        return "This UTR has already been used for another successful order.";
+      }
+      return "This transaction ID has already been used for another successful order.";
+    }
+
+    if (paymentMethod === "upi" && lower.includes("amount mismatch")) {
+      return `Amount mismatch for this UTR. This order requires exactly INR ${inrAmount}.`;
+    }
+
+    if (lower.includes("order does not belong to you")) {
+      return "This payment link belongs to a different account. Please sign in with the correct account.";
+    }
+
+    return raw || "Payment verification failed. Please try again.";
   };
 
   const handleCancel = async () => {
@@ -154,6 +188,14 @@ const Payment = () => {
             ? "Enter your UPI Reference No. (UTR)"
             : "Enter your BEP20 transaction hash"
       );
+      return;
+    }
+    if (paymentMethod === "upi" && !/^\d{12}$/.test(transactionId.trim())) {
+      toast.error("UPI UTR must be exactly 12 digits.");
+      return;
+    }
+    if (paymentMethod === "bep20" && !/^0x[a-fA-F0-9]{64}$/.test(transactionId.trim())) {
+      toast.error("Invalid BEP20 transaction hash format.");
       return;
     }
     setVerifying(true);
@@ -235,10 +277,7 @@ const Payment = () => {
       }
 
       if (!verifyResp.ok) {
-        const errorMsg =
-          verifyResp.payload?.error ||
-          verifyResp.payload?.message ||
-          `Verification failed (${verifyResp.status})`;
+        const errorMsg = buildVerifyErrorMessage(verifyResp.payload);
         console.error("Verify Payment error details:", verifyResp);
         toast.error(errorMsg);
         setVerifying(false);
@@ -346,6 +385,22 @@ const Payment = () => {
           <CardContent className="space-y-6">
             {/* Order Summary */}
             <div className="rounded-xl bg-secondary/50 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">Order ID</span>
+                <div className="flex items-center gap-2">
+                  <code className="max-w-[190px] truncate text-xs font-mono text-foreground sm:max-w-[240px]">
+                    {order.id}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => copyToClipboard(order.id, "Order ID")}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
               {isCreditPurchase ? (
                 <>
                   <div className="flex justify-between text-sm">

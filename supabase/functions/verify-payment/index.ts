@@ -213,6 +213,13 @@ Deno.serve(async (req) => {
         ? String(transaction_id).trim().toLowerCase()
         : String(transaction_id).trim();
 
+    if (payment_type === "upi" && !/^\d{12}$/.test(normalizedTransactionId)) {
+      return new Response(JSON.stringify({ error: "UPI UTR must be exactly 12 digits" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (payment_type === "bep20" && !/^0x[a-fA-F0-9]{64}$/.test(normalizedTransactionId)) {
       return new Response(JSON.stringify({ error: "Invalid BEP20 transaction hash format" }), {
         status: 400,
@@ -286,14 +293,27 @@ Deno.serve(async (req) => {
     // Check for duplicate transaction ID
     const { data: existing } = await adminClient
       .from("orders")
-      .select("id")
+      .select("id, user_id")
       .eq("transaction_id", normalizedTransactionId)
       .eq("status", "completed")
-      .neq("id", order_id);
+      .neq("id", order_id)
+      .limit(1);
 
     if (existing && existing.length > 0) {
+      const existingOrder = existing[0];
+      const sameUser = existingOrder.user_id === userId;
+      const duplicateMessage = payment_type === "upi"
+        ? "This UTR has already been used for another successful order."
+        : "This transaction ID has already been used for another successful order.";
+
       return new Response(
-        JSON.stringify({ error: "This transaction ID has already been used" }),
+        JSON.stringify({
+          error: sameUser
+            ? `${duplicateMessage} Used in your order ${String(existingOrder.id).slice(0, 8)}...`
+            : duplicateMessage,
+          code: "DUPLICATE_TRANSACTION",
+          conflicting_order_id: sameUser ? existingOrder.id : null,
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -432,6 +452,25 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (updateErr) {
+      const duplicateOnFinalize =
+        (updateErr as { code?: string }).code === "23505" ||
+        String((updateErr as { message?: string }).message || "")
+          .toLowerCase()
+          .includes("idx_unique_completed_transaction_id");
+
+      if (duplicateOnFinalize) {
+        return new Response(
+          JSON.stringify({
+            error:
+              payment_type === "upi"
+                ? "This UTR has already been used for another successful order."
+                : "This transaction ID has already been used for another successful order.",
+            code: "DUPLICATE_TRANSACTION",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(JSON.stringify({ error: "Failed to finalize order" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
