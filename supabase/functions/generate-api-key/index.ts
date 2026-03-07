@@ -145,6 +145,7 @@ Deno.serve(async (req) => {
           headers: {
             "Content-Type": "application/json",
             "X-Service-Key": SERVICE_KEY,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
           },
           body: JSON.stringify({
             api_key: apiKey,

@@ -98,6 +98,7 @@ async function bypassRequest(path: string, body: Record<string, unknown>) {
     headers: {
       "Content-Type": "application/json",
       "X-Service-Key": SERVICE_KEY,
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
     },
     body: JSON.stringify(body),
   });
@@ -111,7 +112,10 @@ async function bypassRequest(path: string, body: Record<string, unknown>) {
 async function bypassGet(path: string) {
   const resp = await fetch(`${BYPASS_URL}${path}`, {
     method: "GET",
-    headers: { "X-Service-Key": SERVICE_KEY },
+    headers: {
+      "X-Service-Key": SERVICE_KEY,
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
+    },
   });
   const data = await resp.json();
   if (!resp.ok) {
@@ -249,7 +253,11 @@ Deno.serve(async (req) => {
           try {
             await fetch(`${BYPASS_URL}/api/service/keys/deduct-credits`, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY },
+              headers: {
+                "Content-Type": "application/json",
+                "X-Service-Key": SERVICE_KEY,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
+              },
               body: JSON.stringify({ seller_id: seller.id, credits: creditsNeeded }),
             });
           } catch (_) { /* non-critical */ }
@@ -324,7 +332,11 @@ Deno.serve(async (req) => {
           try {
             await fetch(`${BYPASS_URL}/api/service/keys/deduct-credits`, {
               method: "POST",
-              headers: { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY },
+              headers: {
+                "Content-Type": "application/json",
+                "X-Service-Key": SERVICE_KEY,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
+              },
               body: JSON.stringify({ seller_id: seller.id, credits: creditsNeeded }),
             });
           } catch (_) { /* non-critical */ }
