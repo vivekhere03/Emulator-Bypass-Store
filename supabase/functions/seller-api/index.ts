@@ -11,6 +11,24 @@ const SERVICE_KEY = Deno.env.get("BYPASS_SERVICE_KEY")!;
 
 const SELLER_USER_DURATION_DAYS = 30;
 const DEFAULT_MONTHLY_CREDITS_REQUIRED = 15;
+const POLICY_NOTICE = {
+  current_status:
+    "The bypass is currently working and safe. However, it may stop working at any time and this cannot be predicted.",
+  no_refunds_policy:
+    "If the bypass fails, no refunds will be issued. If Garena fully patches the bypass, it will be permanently discontinued with no refunds.",
+  ban_risks: [
+    { type: "Blacklist", likelihood: "Low" },
+    { type: "7-Day Ban", likelihood: "Medium" },
+    { type: "30-Day Ban", likelihood: "High" },
+    { type: "Permanent Ban", likelihood: "Very Rare" },
+  ],
+  fix_timeline:
+    "If an issue occurs, fixes are usually delivered within 7 to 14 days. If fully patched by Garena, it will be permanently discontinued.",
+  use_at_your_own_risk:
+    "By using this bypass, users acknowledge they are using it at their own risk, especially on main accounts.",
+  recommendation:
+    "Use your main account only for legitimate mobile gameplay and use a separate account for bypass usage.",
+} as const;
 
 async function getMonthlyCreditsRequired(
   adminClient: ReturnType<typeof createClient>,
@@ -161,6 +179,13 @@ Deno.serve(async (req) => {
       case "list-users": {
         const data = await bypassGet(`/api/service/v3/users/list?seller_id=${seller.id}`);
         result = data;
+        break;
+      }
+
+      case "policy": {
+        result = {
+          message: "Policy notice retrieved successfully.",
+        };
         break;
       }
 
@@ -402,7 +427,7 @@ Deno.serve(async (req) => {
         });
     }
 
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify({ ...result, policy_notice: POLICY_NOTICE }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
