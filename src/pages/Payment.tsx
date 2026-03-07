@@ -167,6 +167,18 @@ const Payment = () => {
         return;
       }
 
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (!refreshed.session) {
+          await supabase.auth.signOut();
+          toast.error("Session is invalid. Please sign in again.");
+          navigate("/login");
+          setVerifying(false);
+          return;
+        }
+      }
+
       let { data, error } = await supabase.functions.invoke("verify-payment", {
         body: {
           order_id: orderId,
