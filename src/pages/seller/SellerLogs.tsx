@@ -1,49 +1,66 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, RefreshCw } from "lucide-react";
+
+type ApiUsageLog = {
+  id: string;
+  created_at: string;
+  endpoint: string;
+  credits_used: number;
+  response_status: number | null;
+};
 
 const SellerLogs = () => {
   const { user } = useAuth();
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<ApiUsageLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchLogs = async () => {
-      if (!user) return;
+  const fetchLogs = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
 
-      const { data: seller } = await supabase
-        .from("sellers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+    const { data: seller } = await supabase
+      .from("sellers")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-      if (!seller) {
-        setLoading(false);
-        return;
-      }
-
-      const { data } = await supabase
-        .from("api_usage_logs")
-        .select("*")
-        .eq("seller_id", seller.id)
-        .order("created_at", { ascending: false })
-        .limit(200);
-
-      setLogs(data ?? []);
+    if (!seller) {
+      setLogs([]);
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchLogs();
+    const { data } = await supabase
+      .from("api_usage_logs")
+      .select("id, created_at, endpoint, credits_used, response_status")
+      .eq("seller_id", seller.id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    setLogs((data as ApiUsageLog[]) ?? []);
+    setLoading(false);
   }, [user]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   return (
     <DashboardLayout section="seller">
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">API Usage Logs</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">API Usage Logs</h1>
+          <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
 
         <Card className="glass-card">
           <CardHeader>

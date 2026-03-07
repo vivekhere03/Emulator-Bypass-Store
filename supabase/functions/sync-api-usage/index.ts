@@ -24,6 +24,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const sellerId = String(body?.seller_id || "").trim();
+    const apiKeyHash = String(body?.api_key_hash || "").trim().toLowerCase();
     const endpoint = String(body?.endpoint || "").trim() || "api_key_usage";
     const requestBody = (body?.request_body ?? {}) as Record<string, unknown>;
     const responseStatus = Number.isFinite(Number(body?.response_status))
@@ -31,8 +32,8 @@ Deno.serve(async (req) => {
       : 200;
     const creditsUsed = Math.max(0, Number.parseInt(String(body?.credits_used ?? 0), 10) || 0);
 
-    if (!sellerId) {
-      return new Response(JSON.stringify({ error: "Missing seller_id" }), {
+    if (!sellerId && !apiKeyHash) {
+      return new Response(JSON.stringify({ error: "Missing seller identifier" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -43,11 +44,28 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: seller, error: sellerErr } = await adminClient
-      .from("sellers")
-      .select("id, credit_balance")
-      .eq("id", sellerId)
-      .single();
+    let seller: { id: string; credit_balance: number | null } | null = null;
+    let sellerErr: unknown = null;
+
+    if (sellerId) {
+      const { data, error } = await adminClient
+        .from("sellers")
+        .select("id, credit_balance")
+        .eq("id", sellerId)
+        .maybeSingle();
+      seller = data;
+      sellerErr = error;
+    }
+
+    if (!seller && apiKeyHash) {
+      const { data, error } = await adminClient
+        .from("sellers")
+        .select("id, credit_balance")
+        .eq("api_key_hash", apiKeyHash)
+        .maybeSingle();
+      seller = data;
+      sellerErr = error;
+    }
 
     if (sellerErr || !seller) {
       return new Response(JSON.stringify({ error: "Seller not found" }), {
@@ -56,16 +74,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    const resolvedSellerId = seller.id;
+
     let newBalance = seller.credit_balance ?? 0;
     if (creditsUsed > 0) {
       newBalance = Math.max(0, newBalance - creditsUsed);
       await adminClient
         .from("sellers")
         .update({ credit_balance: newBalance })
-        .eq("id", sellerId);
+        .eq("id", resolvedSellerId);
 
       await adminClient.from("credit_transactions").insert({
-        seller_id: sellerId,
+        seller_id: resolvedSellerId,
         amount: -creditsUsed,
         type: "api_key_usage",
         description: `API usage via ${endpoint} (${creditsUsed} credit${creditsUsed > 1 ? "s" : ""})`,
@@ -73,7 +93,7 @@ Deno.serve(async (req) => {
     }
 
     await adminClient.from("api_usage_logs").insert({
-      seller_id: sellerId,
+      seller_id: resolvedSellerId,
       endpoint,
       credits_used: creditsUsed,
       request_body: requestBody,
@@ -83,7 +103,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        seller_id: sellerId,
+        seller_id: resolvedSellerId,
         credits_used: creditsUsed,
         credits_remaining: newBalance,
       }),

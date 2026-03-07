@@ -240,6 +240,16 @@ const SellerApiKey = () => {
             </div>
 
             <div>
+              <h3 className="mb-2 font-semibold text-foreground">Connection Checklist</h3>
+              <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
+                <li>Use API host: <code className="text-primary">https://bypass.cgxhub.in</code></li>
+                <li>Health check: <code>/api/health</code> should return HTTP 200</li>
+                <li>Use v3 routes only (example: <code>/api/v3/users/bulk-add</code>)</li>
+                <li>Seller panel API logs are shown at <code>/seller/logs</code> for successful signed requests</li>
+              </ul>
+            </div>
+
+            <div>
               <h3 className="mb-3 font-semibold text-foreground">Endpoints</h3>
               <div className="space-y-3">
                 {[
@@ -325,6 +335,7 @@ const SellerApiKey = () => {
                 <li>HMAC signature prevents replay attacks (30-second window)</li>
                 <li>You can only manage users that your key created</li>
                 <li>Credits deduct from your portal balance when using the API</li>
+                <li>Bulk add deducts credits per created user (3 users = 3 credits, 4 users = 4 credits)</li>
               </ul>
             </div>
           </CardContent>
