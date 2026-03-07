@@ -334,11 +334,21 @@ Deno.serve(async (req) => {
 
       try {
         const resp = await fetch(`https://upi.cgxhub.in/api/upi/verify/${utrParam}?amount=${inrAmount}&order_id=${order_id}`, {
-          headers: { "X-Service-Key": vpsServiceKey }
+          headers: {
+            "X-Service-Key": vpsServiceKey,
+            "User-Agent": "CGX-Supabase-Worker/1.0"
+          }
         });
+
+        if (!resp.ok) {
+          const errText = await resp.text();
+          console.error("VPS returned an error or was blocked by Cloudflare:", resp.status, errText);
+          throw new Error(`Server returned ${resp.status}`);
+        }
+
         const json = await resp.json();
 
-        if (resp.ok && json.verified) {
+        if (json.verified) {
           verifyResult = { success: true, message: `UPI payment verified: ${json.amount} INR from ${json.sender_upi}` };
         } else {
           verifyResult = { success: false, message: json.message || "UPI Verification failed. Try again." };
