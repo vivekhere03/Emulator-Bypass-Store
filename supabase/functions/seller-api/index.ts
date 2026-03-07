@@ -23,6 +23,50 @@ function getCreditsForDuration(days: number): number | null {
   return CREDIT_PRICING[days] ?? null;
 }
 
+async function debitCreditsAtomic(
+  adminClient: ReturnType<typeof createClient>,
+  sellerId: string,
+  creditsNeeded: number,
+): Promise<{ ok: boolean; newBalance?: number }> {
+  const { data: currentSeller, error: fetchErr } = await adminClient
+    .from("sellers")
+    .select("credit_balance")
+    .eq("id", sellerId)
+    .single();
+
+  if (fetchErr || !currentSeller) return { ok: false };
+  if ((currentSeller.credit_balance ?? 0) < creditsNeeded) return { ok: false };
+
+  const newBalance = (currentSeller.credit_balance ?? 0) - creditsNeeded;
+  const { data: updated, error: updateErr } = await adminClient
+    .from("sellers")
+    .update({ credit_balance: newBalance })
+    .eq("id", sellerId)
+    .eq("credit_balance", currentSeller.credit_balance)
+    .select("credit_balance")
+    .single();
+
+  if (updateErr || !updated) return { ok: false };
+  return { ok: true, newBalance: updated.credit_balance };
+}
+
+async function refundCredits(
+  adminClient: ReturnType<typeof createClient>,
+  sellerId: string,
+  credits: number,
+) {
+  const { data: currentSeller } = await adminClient
+    .from("sellers")
+    .select("credit_balance")
+    .eq("id", sellerId)
+    .single();
+  const existing = currentSeller?.credit_balance ?? 0;
+  await adminClient
+    .from("sellers")
+    .update({ credit_balance: existing + credits })
+    .eq("id", sellerId);
+}
+
 // Helper: call the bypass server service endpoint
 async function bypassRequest(path: string, body: Record<string, unknown>) {
   const resp = await fetch(`${BYPASS_URL}${path}`, {
@@ -141,17 +185,26 @@ Deno.serve(async (req) => {
           });
         }
 
-        const data = await bypassRequest("/api/service/v3/users/add", {
-          username: username.trim().toLowerCase(),
-          hwid: hwid?.trim() || "",
-          duration_days: days,
-          seller_id: seller.id,
-        });
+        const debit = await debitCreditsAtomic(adminClient, seller.id, creditsNeeded);
+        if (!debit.ok) {
+          return new Response(JSON.stringify({ error: "Insufficient credits or concurrent update detected. Try again." }), {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
-        await adminClient
-          .from("sellers")
-          .update({ credit_balance: seller.credit_balance - creditsNeeded })
-          .eq("id", seller.id);
+        let data: Record<string, unknown>;
+        try {
+          data = await bypassRequest("/api/service/v3/users/add", {
+            username: username.trim().toLowerCase(),
+            hwid: hwid?.trim() || "",
+            duration_days: days,
+            seller_id: seller.id,
+          });
+        } catch (err) {
+          await refundCredits(adminClient, seller.id, creditsNeeded);
+          throw err;
+        }
 
         await adminClient.from("credit_transactions").insert({
           seller_id: seller.id,
@@ -178,7 +231,7 @@ Deno.serve(async (req) => {
           response_status: 200,
         });
 
-        result = { ...data, credits_used: creditsNeeded, credits_remaining: seller.credit_balance - creditsNeeded };
+        result = { ...data, credits_used: creditsNeeded, credits_remaining: debit.newBalance };
         break;
       }
 
@@ -208,16 +261,25 @@ Deno.serve(async (req) => {
           });
         }
 
-        const data = await bypassRequest("/api/service/v3/users/extend", {
-          username: username.trim().toLowerCase(),
-          duration_days: days,
-          seller_id: seller.id,
-        });
+        const debit = await debitCreditsAtomic(adminClient, seller.id, creditsNeeded);
+        if (!debit.ok) {
+          return new Response(JSON.stringify({ error: "Insufficient credits or concurrent update detected. Try again." }), {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
-        await adminClient
-          .from("sellers")
-          .update({ credit_balance: seller.credit_balance - creditsNeeded })
-          .eq("id", seller.id);
+        let data: Record<string, unknown>;
+        try {
+          data = await bypassRequest("/api/service/v3/users/extend", {
+            username: username.trim().toLowerCase(),
+            duration_days: days,
+            seller_id: seller.id,
+          });
+        } catch (err) {
+          await refundCredits(adminClient, seller.id, creditsNeeded);
+          throw err;
+        }
 
         await adminClient.from("credit_transactions").insert({
           seller_id: seller.id,
@@ -244,7 +306,7 @@ Deno.serve(async (req) => {
           response_status: 200,
         });
 
-        result = { ...data, credits_used: creditsNeeded, credits_remaining: seller.credit_balance - creditsNeeded };
+        result = { ...data, credits_used: creditsNeeded, credits_remaining: debit.newBalance };
         break;
       }
 

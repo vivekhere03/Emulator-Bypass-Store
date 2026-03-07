@@ -126,10 +126,11 @@ function verifyBep20Tx(
   timeWindowHours: number
 ): { success: boolean; message: string } {
   const cutoff = Date.now() - timeWindowHours * 3600 * 1000;
+  const normalizedTxId = txId.trim().toLowerCase();
 
   for (const tx of transactions) {
-    const txTxId = tx.txId || tx.id || "";
-    if (txTxId !== txId && !txTxId.includes(txId) && !txId.includes(txTxId)) continue;
+    const txTxId = String(tx.txId || tx.id || "").trim().toLowerCase();
+    if (!txTxId || txTxId !== normalizedTxId) continue;
 
     const insertTime = tx.insertTime || "0";
     const txTime = String(insertTime).length > 10 ? Number(insertTime) : Number(insertTime) * 1000;
@@ -194,6 +195,13 @@ Deno.serve(async (req) => {
 
     if (!["binance_pay", "bep20", "upi"].includes(payment_type)) {
       return new Response(JSON.stringify({ error: "Invalid payment_type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (payment_type === "bep20" && !/^0x[a-fA-F0-9]{64}$/.test(String(transaction_id).trim())) {
+      return new Response(JSON.stringify({ error: "Invalid BEP20 transaction hash format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -316,7 +324,13 @@ Deno.serve(async (req) => {
         }
       }
       const utrParam = encodeURIComponent(transaction_id.trim());
-      const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY") || "CGXVIVEK&ISHITAdsfsdkfjh453590awdad$$#$#@$%";
+      const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY");
+      if (!vpsServiceKey) {
+        return new Response(
+          JSON.stringify({ error: "UPI verification service key is not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       try {
         const resp = await fetch(`https://upi.cgxhub.in/api/upi/verify/${utrParam}?amount=${inrAmount}&order_id=${order_id}`, {
@@ -380,7 +394,7 @@ Deno.serve(async (req) => {
       .eq("id", order_id);
 
     // ── Send Discord webhook notification ───────────────────────
-    const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1479144146458644624/5SwcZlcOKpEOBqgoX3I5nNXGTlt24KdodQG55hwzDKALLEFj0aP-ULune1kApIQOGJUs";
+    const DISCORD_WEBHOOK = Deno.env.get("DISCORD_WEBHOOK_URL");
     try {
       const embedColor = 0x00ff88; // green
       const embed = {
@@ -396,11 +410,13 @@ Deno.serve(async (req) => {
         footer: { text: "CGX Payment System • Verified" },
         timestamp: new Date().toISOString(),
       };
-      await fetch(DISCORD_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ embeds: [embed] }),
-      });
+      if (DISCORD_WEBHOOK) {
+        await fetch(DISCORD_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ embeds: [embed] }),
+        });
+      }
     } catch (e) {
       console.error("Discord webhook failed (non-fatal):", e);
     }
