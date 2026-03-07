@@ -159,13 +159,54 @@ const Payment = () => {
     setVerifying(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("verify-payment", {
+      const { data: sessionData } = await supabase.auth.getSession();
+      let accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        accessToken = refreshed.session?.access_token;
+      }
+      if (!accessToken) {
+        toast.error("Session expired. Please sign in again.");
+        navigate("/login");
+        setVerifying(false);
+        return;
+      }
+
+      let { data, error } = await supabase.functions.invoke("verify-payment", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: {
           order_id: orderId,
           transaction_id: transactionId.trim(),
           payment_type: paymentMethod,
         },
       });
+
+      const maybeInvalidJwt = `${error?.message ?? ""}`.toLowerCase().includes("invalid jwt");
+      if (maybeInvalidJwt) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        const retryToken = refreshed.session?.access_token;
+        if (!retryToken) {
+          toast.error("Session expired. Please sign in again.");
+          navigate("/login");
+          setVerifying(false);
+          return;
+        }
+
+        const retry = await supabase.functions.invoke("verify-payment", {
+          headers: {
+            Authorization: `Bearer ${retryToken}`,
+          },
+          body: {
+            order_id: orderId,
+            transaction_id: transactionId.trim(),
+            payment_type: paymentMethod,
+          },
+        });
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         let errorMsg = "Verification failed";
@@ -272,7 +313,7 @@ const Payment = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-4 py-10">
+      <div className="container mx-auto flex min-h-[70vh] items-center justify-center px-3 py-6 sm:px-4 sm:py-10">
         <Card className="w-full max-w-lg glass-card">
           <CardHeader className="text-center">
             <Shield className="mx-auto mb-2 h-10 w-10 text-primary" />
@@ -345,13 +386,13 @@ const Payment = () => {
             >
               <TabsList className="w-full grid grid-cols-3">
                 <TabsTrigger value="upi">
-                  <QrCode className="mr-1.5 h-4 w-4" /> UPI
+                  <QrCode className="mr-1.5 h-4 w-4 hidden sm:inline" /> UPI
                 </TabsTrigger>
                 <TabsTrigger value="binance_pay">
-                  <Wallet className="mr-1.5 h-4 w-4" /> Binance Pay
+                  <Wallet className="mr-1.5 h-4 w-4 hidden sm:inline" /> Binance Pay
                 </TabsTrigger>
                 <TabsTrigger value="bep20">
-                  <Shield className="mr-1.5 h-4 w-4" /> BEP20 (USDT)
+                  <Shield className="mr-1.5 h-4 w-4 hidden sm:inline" /> BEP20 (USDT)
                 </TabsTrigger>
               </TabsList>
 
@@ -372,7 +413,7 @@ const Payment = () => {
                 <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground mb-1">UPI ID</p>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-sm font-mono text-foreground">
+                    <code className="flex-1 text-sm font-mono text-foreground break-all">
                       bypas@ptyes
                     </code>
                     <Button
@@ -506,12 +547,12 @@ const Payment = () => {
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 variant="outline"
                 size="lg"
                 onClick={handleCancel}
-                className="flex-shrink-0"
+                className="w-full sm:w-auto sm:flex-shrink-0"
               >
                 Cancel
               </Button>
