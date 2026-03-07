@@ -4,7 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Zap, Users, ArrowRight, Clock, DollarSign, Coins } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Shield,
+  Zap,
+  Users,
+  ArrowRight,
+  Clock,
+  DollarSign,
+  Coins,
+  Ban,
+  AlertTriangle,
+  Info,
+  Smartphone,
+  CheckCircle2,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,6 +30,13 @@ interface Product {
   is_active: boolean;
   durations: { id: string; duration_label: string; duration_days: number; price: number }[];
 }
+
+const BAN_RISKS = [
+  { label: "Blacklist", severity: "Low" },
+  { label: "7-Day Ban", severity: "Medium" },
+  { label: "30-Day Ban", severity: "High" },
+  { label: "Permanent Ban", severity: "Very Rare" },
+] as const;
 
 const Index = () => {
   const { user } = useAuth();
@@ -190,6 +211,112 @@ const Index = () => {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="pb-16">
+        <div className="container mx-auto space-y-4 px-4">
+          <Card className="border-emerald-500/30 bg-emerald-500/5">
+            <CardContent className="flex gap-4 p-5">
+              <div className="rounded-lg bg-emerald-500/15 p-2.5">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Current Status</h3>
+                <p className="text-sm text-muted-foreground">
+                  The bypass is currently <span className="font-semibold text-emerald-400">working and safe</span>.
+                  However, there is always a possibility that it may stop working in the future.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-red-500/40 bg-red-500/5">
+            <CardContent className="flex gap-4 p-5">
+              <div className="rounded-lg bg-red-500/15 p-2.5">
+                <Ban className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">No Refunds Policy</h3>
+                <p className="text-sm text-muted-foreground">
+                  If the bypass fails, <span className="font-semibold text-red-400">no refunds will be issued</span>.
+                  If Garena fully patches the bypass, it will be permanently discontinued with no refunds.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-secondary/40">
+            <CardContent className="flex gap-4 p-5">
+              <div className="rounded-lg bg-primary/10 p-2.5">
+                <AlertTriangle className="h-5 w-5 text-primary" />
+              </div>
+              <div className="w-full">
+                <h3 className="text-lg font-semibold">Ban Risks</h3>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Some users may be banned. Possible consequences include:
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {BAN_RISKS.map((risk) => (
+                    <div
+                      key={risk.label}
+                      className="rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-center"
+                    >
+                      <p className="text-sm font-semibold text-foreground">{risk.label}</p>
+                      <p className="text-xs text-muted-foreground">{risk.severity}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-secondary/40">
+            <CardContent className="flex gap-4 p-5">
+              <div className="rounded-lg bg-primary/10 p-2.5">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Fix Timeline</h3>
+                <p className="text-sm text-muted-foreground">
+                  Usually, if an issue occurs, fixes are delivered within{" "}
+                  <span className="font-semibold text-primary">7 to 14 days</span>. If the bypass is fully patched by
+                  Garena, it will be permanently discontinued.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-secondary/40">
+            <CardContent className="flex gap-4 p-5">
+              <div className="rounded-lg bg-primary/10 p-2.5">
+                <Info className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Use at Your Own Risk</h3>
+                <p className="text-sm text-muted-foreground">
+                  By using this bypass, you acknowledge that you do so{" "}
+                  <span className="font-semibold text-foreground">at your own risk</span>, especially if you choose to
+                  use it on your main account.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-cyan-500/40 bg-cyan-500/5">
+            <CardContent className="flex gap-4 p-5">
+              <div className="rounded-lg bg-cyan-500/15 p-2.5">
+                <Smartphone className="h-5 w-5 text-cyan-300" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Our Recommendation</h3>
+                <p className="text-sm text-muted-foreground">
+                  Continue using your main account for legitimate gaming on mobile devices and use a separate account
+                  for bypass usage.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
     </MainLayout>
