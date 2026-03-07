@@ -34,7 +34,12 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminPackages from "./pages/admin/AdminPackages";
 import AdminSettings from "./pages/admin/AdminSettings";
 
+import Clarity from '@microsoft/clarity';
+
 const queryClient = new QueryClient();
+
+// Initialize Clarity
+Clarity.init("vrzuxpck9w");
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
