@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
     }
 
     // Deno environment auto-injects SUPABASE_URL and SUPABASE_ANON_KEY 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("URL") ?? "";
+    const supabaseUrl = Deno.env.get("SUPA_URL") ?? Deno.env.get("URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPA_ANON_KEY") ?? Deno.env.get("ANON_KEY") ?? "";
 
     const supabase = createClient(
