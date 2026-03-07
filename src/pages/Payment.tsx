@@ -179,15 +179,46 @@ const Payment = () => {
         }
       }
 
-      let { data, error } = await supabase.functions.invoke("verify-payment", {
-        body: {
-          order_id: orderId,
-          transaction_id: transactionId.trim(),
-          payment_type: paymentMethod,
-        },
-      });
+      const { data: validatedSession } = await supabase.auth.getSession();
+      const accessToken = validatedSession.session?.access_token;
+      if (!accessToken) {
+        await supabase.auth.signOut();
+        toast.error("Session is invalid. Please sign in again.");
+        navigate("/login");
+        setVerifying(false);
+        return;
+      }
 
-      const maybeInvalidJwt = `${error?.message ?? ""}`.toLowerCase().includes("invalid jwt");
+      const invokeVerify = async (token: string) => {
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              order_id: orderId,
+              transaction_id: transactionId.trim(),
+              payment_type: paymentMethod,
+            }),
+          }
+        );
+
+        let payload: any = {};
+        try {
+          payload = await resp.json();
+        } catch {
+          payload = {};
+        }
+        return { ok: resp.ok, status: resp.status, payload };
+      };
+
+      let verifyResp = await invokeVerify(accessToken);
+      const firstMsg = `${verifyResp.payload?.message ?? verifyResp.payload?.error ?? ""}`;
+      const maybeInvalidJwt = verifyResp.status === 401 && firstMsg.toLowerCase().includes("invalid jwt");
       if (maybeInvalidJwt) {
         const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
         if (refreshErr || !refreshed.session) {
@@ -197,18 +228,11 @@ const Payment = () => {
           return;
         }
 
-        const retry = await supabase.functions.invoke("verify-payment", {
-          body: {
-            order_id: orderId,
-            transaction_id: transactionId.trim(),
-            payment_type: paymentMethod,
-          },
-        });
-        data = retry.data;
-        error = retry.error;
+        verifyResp = await invokeVerify(refreshed.session.access_token);
       }
 
-      const stillInvalidJwt = `${error?.message ?? ""}`.toLowerCase().includes("invalid jwt");
+      const secondMsg = `${verifyResp.payload?.message ?? verifyResp.payload?.error ?? ""}`;
+      const stillInvalidJwt = verifyResp.status === 401 && secondMsg.toLowerCase().includes("invalid jwt");
       if (stillInvalidJwt) {
         await supabase.auth.signOut();
         toast.error("Session is invalid. Please sign in again.");
@@ -217,39 +241,18 @@ const Payment = () => {
         return;
       }
 
-      if (error) {
-        let errorMsg = "Verification failed";
-        try {
-          // FunctionsHttpError stores the Response in error.context
-          const ctx = (error as any).context;
-          if (ctx && ctx instanceof Response) {
-            // Clone first in case body was already read
-            const cloned = ctx.clone();
-            try {
-              const body = await cloned.json();
-              errorMsg = body?.error || body?.message || errorMsg;
-            } catch {
-              const text = await ctx.text();
-              if (text) errorMsg = text;
-            }
-          } else if (error.message) {
-            // Try parsing error.message as JSON (some versions embed it there)
-            try {
-              const parsed = JSON.parse(error.message);
-              errorMsg = parsed?.error || parsed?.message || error.message;
-            } catch {
-              errorMsg = error.message;
-            }
-          }
-        } catch {
-          errorMsg = error.message || errorMsg;
-        }
-        console.error("Verify Payment error details:", error);
+      if (!verifyResp.ok) {
+        const errorMsg =
+          verifyResp.payload?.error ||
+          verifyResp.payload?.message ||
+          `Verification failed (${verifyResp.status})`;
+        console.error("Verify Payment error details:", verifyResp);
         toast.error(errorMsg);
         setVerifying(false);
         return;
       }
 
+      const data = verifyResp.payload;
       if (data?.success) {
         toast.success(
           isCreditPurchase
