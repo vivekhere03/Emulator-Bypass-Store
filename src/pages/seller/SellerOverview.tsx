@@ -51,7 +51,7 @@ const SellerOverview = () => {
                   : `Only ${creditBalance} credits remaining. Buy more soon!`}
               </span>
               <Button size="sm" variant="outline" className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10" asChild>
-                <Link to="/seller/credits">Buy Credits</Link>
+                <Link to="/buy-credits">Buy Credits</Link>
               </Button>
             </AlertDescription>
           </Alert>
