@@ -137,7 +137,16 @@ const SellerCredits = () => {
                       <p className="text-sm text-muted-foreground">{pkg.credits} credits</p>
                     </div>
                   </div>
-                  <div className="text-3xl font-bold text-primary">${Number(pkg.price).toFixed(2)}</div>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-bold text-primary">${Number(pkg.price).toFixed(2)}</span>
+                    <span className="text-lg font-semibold text-green-400">
+                      ₹{pkg.price_inr ? Number(pkg.price_inr).toFixed(0) : Math.ceil(Number(pkg.price) * 90)}
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-400">Binance</span>
+                    <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-400">UPI / GPay / PhonePe</span>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     ${(Number(pkg.price) / pkg.credits).toFixed(2)} per credit
                   </p>
