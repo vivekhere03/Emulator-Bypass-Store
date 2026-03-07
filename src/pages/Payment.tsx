@@ -363,7 +363,7 @@ const Payment = () => {
                 <div className="flex flex-col items-center gap-3">
                   <div className="rounded-xl border border-border p-4 bg-white">
                     <QRCode
-                      value={`upi://pay?pa=cgxvivek@ptyes&pn=CGX%20Store&am=${inrAmount}&tr=${order.id}&tn=Order%20${order.id}`}
+                      value={`upi://pay?pa=bypas@ptyes&pn=CGX%20Store&am=${inrAmount}&tr=${order.id}&tn=Order%20${order.id}`}
                       size={180}
                       level="H"
                     />
@@ -376,12 +376,12 @@ const Payment = () => {
                   <p className="text-xs text-muted-foreground mb-1">UPI ID</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-sm font-mono text-foreground">
-                      cgxvivek@ptyes
+                      bypas@ptyes
                     </code>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => copyToClipboard("cgxvivek@ptyes", "UPI ID")}
+                      onClick={() => copyToClipboard("bypas@ptyes", "UPI ID")}
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
