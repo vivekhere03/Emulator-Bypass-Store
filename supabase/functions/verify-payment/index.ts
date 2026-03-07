@@ -380,15 +380,11 @@ Deno.serve(async (req) => {
     }
 
     if (!verifyResult.success) {
-      // Update order status to failed
-      await adminClient
-        .from("orders")
-        .update({ status: "failed", transaction_id: transaction_id })
-        .eq("id", order_id);
-
+      // Return the specific verification error (e.g., "Already used") to the frontend
+      // without failing the whole order so the user can try again!
       return new Response(
         JSON.stringify({ success: false, error: verifyResult.message }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
