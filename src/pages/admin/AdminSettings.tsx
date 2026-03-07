@@ -12,6 +12,7 @@ import { toast } from "sonner";
 const AdminSettings = () => {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -28,11 +29,48 @@ const AdminSettings = () => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const saveSettings = async () => {
-    for (const [key, value] of Object.entries(settings)) {
-      await supabase.from("site_settings").upsert({ key, value }, { onConflict: "key" });
+  const saveOneSetting = async (key: string, value: string) => {
+    // Update all rows for this key (handles accidental duplicates cleanly).
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("site_settings")
+      .update({ value })
+      .eq("key", key)
+      .select("id");
+
+    if (updateError) {
+      throw updateError;
     }
-    toast.success("Settings saved");
+
+    if ((updatedRows?.length ?? 0) > 0) {
+      return;
+    }
+
+    const { error: insertError } = await supabase
+      .from("site_settings")
+      .insert({ key, value });
+
+    if (insertError) {
+      throw insertError;
+    }
+  };
+
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      for (const [key, value] of Object.entries(settings)) {
+        await saveOneSetting(key, value);
+      }
+      toast.success("Settings saved");
+      // Refresh from DB so UI confirms persisted values.
+      const { data } = await supabase.from("site_settings").select("*");
+      const map: Record<string, string> = {};
+      data?.forEach((s) => { map[s.key] = s.value || ""; });
+      setSettings(map);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -40,7 +78,7 @@ const AdminSettings = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Settings</h1>
-          <Button onClick={saveSettings}>
+          <Button onClick={saveSettings} disabled={saving || loading}>
             <Save className="mr-2 h-4 w-4" /> Save Settings
           </Button>
         </div>
