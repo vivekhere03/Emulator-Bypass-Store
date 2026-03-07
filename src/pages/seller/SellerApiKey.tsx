@@ -9,6 +9,9 @@ import { Key, Copy, RefreshCw, AlertTriangle, CheckCircle2, Shield, Eye, EyeOff 
 import { toast } from "sonner";
 
 const SellerApiKey = () => {
+  const apiBaseUrl = import.meta.env.VITE_BYPASS_API_BASE_URL || window.location.origin;
+  const sellerPanelUrl = import.meta.env.VITE_SELLER_PANEL_URL || window.location.origin;
+
   const { user } = useAuth();
   const [seller, setSeller] = useState<any>(null);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
@@ -29,10 +32,24 @@ const SellerApiKey = () => {
     fetchSeller();
   }, [user]);
 
+  const getFunctionErrorMessage = async (error: any) => {
+    let detailed = error?.message || "Failed to generate key";
+    const context = error?.context;
+    if (context && typeof context.json === "function") {
+      try {
+        const body = await context.json();
+        detailed = body?.error || body?.message || detailed;
+      } catch {
+        // Ignore context parse issues and use fallback message.
+      }
+    }
+    return detailed;
+  };
+
   const handleGenerate = async () => {
     if (seller?.api_key_hash) {
       const confirmed = window.confirm(
-        "⚠️ This will REVOKE your current API key. Any scripts or bots using the old key will stop working.\n\nAre you sure?"
+        "This will revoke your current API key. Any scripts or bots using the old key will stop working.\n\nAre you sure?"
       );
       if (!confirmed) return;
     }
@@ -44,7 +61,10 @@ const SellerApiKey = () => {
     try {
       const { data, error } = await supabase.functions.invoke("generate-api-key");
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getFunctionErrorMessage(error));
+      }
+
       if (data?.error) {
         toast.error(data.error);
       } else if (data?.api_key) {
@@ -54,7 +74,7 @@ const SellerApiKey = () => {
           api_key_prefix: data.prefix,
           api_key_hash: "set",
         }));
-        toast.success("API key generated! Copy it now — it won't be shown again.");
+        toast.success("API key generated. Copy it now, it will not be shown again.");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to generate key");
@@ -66,7 +86,7 @@ const SellerApiKey = () => {
   const copyKey = (text: string) => {
     navigator.clipboard.writeText(text);
     setKeyCopied(true);
-    toast.success("API key copied to clipboard!");
+    toast.success("API key copied to clipboard.");
   };
 
   return (
@@ -74,23 +94,18 @@ const SellerApiKey = () => {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">API Key Management</h1>
 
-        {/* Generated Key Alert — Only shown after generation */}
         {generatedKey && (
           <Alert className="border-primary/30 bg-primary/5">
             <Shield className="h-4 w-4 text-primary" />
             <AlertDescription className="space-y-3">
               <p className="font-semibold text-foreground">
-                🔑 Your new API key (save it NOW — it won't be shown again!)
+                Your new API key (save it now, it will not be shown again)
               </p>
               <div className="flex items-center gap-2 rounded-lg bg-secondary p-3">
-                <code className="flex-1 font-mono text-sm break-all text-foreground">
-                  {showKey ? generatedKey : "•".repeat(generatedKey.length)}
+                <code className="flex-1 break-all font-mono text-sm text-foreground">
+                  {showKey ? generatedKey : "*".repeat(generatedKey.length)}
                 </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowKey(!showKey)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setShowKey(!showKey)}>
                   {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
                 <Button
@@ -99,9 +114,13 @@ const SellerApiKey = () => {
                   onClick={() => copyKey(generatedKey)}
                 >
                   {keyCopied ? (
-                    <><CheckCircle2 className="mr-1 h-3 w-3" /> Copied</>
+                    <>
+                      <CheckCircle2 className="mr-1 h-3 w-3" /> Copied
+                    </>
                   ) : (
-                    <><Copy className="mr-1 h-3 w-3" /> Copy</>
+                    <>
+                      <Copy className="mr-1 h-3 w-3" /> Copy
+                    </>
                   )}
                 </Button>
               </div>
@@ -109,7 +128,6 @@ const SellerApiKey = () => {
           </Alert>
         )}
 
-        {/* Current Key Status */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -123,7 +141,7 @@ const SellerApiKey = () => {
             <div className="flex items-center gap-3 rounded-lg bg-secondary p-4">
               <code className="flex-1 font-mono text-sm text-foreground">
                 {seller?.api_key_prefix
-                  ? `${seller.api_key_prefix}${"•".repeat(32)}`
+                  ? `${seller.api_key_prefix}${"*".repeat(32)}`
                   : "No API key generated yet"}
               </code>
             </div>
@@ -160,29 +178,29 @@ const SellerApiKey = () => {
           </CardContent>
         </Card>
 
-        {/* API Documentation */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>API Documentation</CardTitle>
             <CardDescription className="space-y-1">
-              <span>Base URL: <code className="text-primary">https://bypass.cgxhub.in</code></span>
+              <span>
+                Base URL: <code className="text-primary">{apiBaseUrl}</code>
+              </span>
               <br />
               <span>
                 Or use the Seller Panel directly:{" "}
                 <a
-                  href="https://seller.cgxhub.in/"
+                  href={sellerPanelUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline hover:text-primary/80"
                 >
-                  https://seller.cgxhub.in/
-                </a>
-                {" "}— manage users from the web without writing any code.
+                  {sellerPanelUrl}
+                </a>{" "}
+                to manage users from the web without writing any code.
               </span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Authentication */}
             <div>
               <h3 className="mb-2 font-semibold text-foreground">Authentication</h3>
               <p className="mb-3 text-sm text-muted-foreground">
@@ -221,57 +239,56 @@ const SellerApiKey = () => {
               </div>
             </div>
 
-            {/* Endpoints */}
             <div>
               <h3 className="mb-3 font-semibold text-foreground">Endpoints</h3>
               <div className="space-y-3">
                 {[
                   {
                     method: "POST",
-                    path: "/api/v2/users/add",
+                    path: "/api/v3/users/add",
                     desc: "Add a user",
                     cost: "1 credit",
                     fields: "username (required), hwid, duration_days (1-365)",
                   },
                   {
                     method: "POST",
-                    path: "/api/v2/users/bulk-add",
+                    path: "/api/v3/users/bulk-add",
                     desc: "Bulk add users",
                     cost: "1 credit/user",
                     fields: "prefix (required), count (1-50), duration_days",
                   },
                   {
                     method: "POST",
-                    path: "/api/v2/users/extend",
+                    path: "/api/v3/users/extend",
                     desc: "Extend a user",
                     cost: "1 credit",
                     fields: "username (required), duration_days",
                   },
                   {
                     method: "POST",
-                    path: "/api/v2/users/reset-hwid",
+                    path: "/api/v3/users/reset-hwid",
                     desc: "Reset HWID",
                     cost: "Free",
                     fields: "username (required), new_hwid (required)",
                   },
                   {
                     method: "POST",
-                    path: "/api/v2/users/remove",
+                    path: "/api/v3/users/remove",
                     desc: "Remove a user",
                     cost: "Free",
                     fields: "username (required)",
                   },
                   {
                     method: "GET",
-                    path: "/api/v2/users/list",
+                    path: "/api/v3/users/list",
                     desc: "List your users",
                     cost: "Free",
                     fields: "No body",
                   },
                   {
                     method: "GET",
-                    path: "/api/v2/key/info",
-                    desc: "Key info & credits",
+                    path: "/api/v3/key/info",
+                    desc: "Key info and credits",
                     cost: "Free",
                     fields: "No body",
                   },
@@ -294,20 +311,19 @@ const SellerApiKey = () => {
                       <span className="ml-auto text-xs text-muted-foreground">{ep.cost}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {ep.desc} — {ep.fields}
+                      {ep.desc}: {ep.fields}
                     </p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Security Notes */}
             <div>
-              <h3 className="mb-2 font-semibold text-foreground">⚠️ Security</h3>
-              <ul className="space-y-1 text-xs text-muted-foreground list-disc list-inside">
+              <h3 className="mb-2 font-semibold text-foreground">Security</h3>
+              <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
                 <li>Never expose your API key in client-side/public code</li>
                 <li>HMAC signature prevents replay attacks (30-second window)</li>
-                <li>You can only manage users that YOUR key created</li>
+                <li>You can only manage users that your key created</li>
                 <li>Credits deduct from your portal balance when using the API</li>
               </ul>
             </div>
