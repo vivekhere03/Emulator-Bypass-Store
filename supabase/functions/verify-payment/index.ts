@@ -204,7 +204,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (payment_type === "bep20" && !/^0x[a-fA-F0-9]{64}$/.test(String(transaction_id).trim())) {
+    const normalizedTransactionId =
+      payment_type === "bep20"
+        ? String(transaction_id).trim().toLowerCase()
+        : String(transaction_id).trim();
+
+    if (payment_type === "bep20" && !/^0x[a-fA-F0-9]{64}$/.test(normalizedTransactionId)) {
       return new Response(JSON.stringify({ error: "Invalid BEP20 transaction hash format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -278,8 +283,8 @@ Deno.serve(async (req) => {
     const { data: existing } = await adminClient
       .from("orders")
       .select("id")
-      .eq("transaction_id", transaction_id)
-      .eq("status", "completed")
+      .eq("transaction_id", normalizedTransactionId)
+      // .eq("status", "completed")
       .neq("id", order_id);
 
     if (existing && existing.length > 0) {
@@ -327,8 +332,8 @@ Deno.serve(async (req) => {
           inrAmount = Number((pkg as any).price_inr);
         }
       }
-      const utrParam = encodeURIComponent(transaction_id.trim());
-      const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY") || "CGXVIVEK&ISHITAdsfsdkfjh453590awdad$$#$#@$%";
+      const utrParam = encodeURIComponent(normalizedTransactionId);
+      const vpsServiceKey = Deno.env.get("BYPASS_SERVICE_KEY");
       if (!vpsServiceKey) {
         return new Response(
           JSON.stringify({ error: "UPI verification service key is not configured" }),
@@ -346,8 +351,14 @@ Deno.serve(async (req) => {
 
         if (!resp.ok) {
           const errText = await resp.text();
-          console.error("VPS returned an error or was blocked by Cloudflare:", resp.status, errText);
-          throw new Error(`Server returned ${resp.status}`);
+          console.error("UPI service error:", resp.status, errText);
+          const msg = resp.status === 403
+            ? "UPI verification service rejected this request (403). Please contact admin."
+            : `UPI verification service returned ${resp.status}. Please try again.`;
+          return new Response(
+            JSON.stringify({ error: msg }),
+            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
 
         const json = await resp.json();
@@ -359,7 +370,10 @@ Deno.serve(async (req) => {
         }
       } catch (e) {
         console.error("UPI Verification error:", e);
-        verifyResult = { success: false, message: `Failed to connect to UPI verification service: ${(e as Error).message}` };
+        return new Response(
+          JSON.stringify({ error: `Failed to connect to UPI verification service: ${(e as Error).message}` }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     } else if (payment_type === "binance_pay") {
       const txResult = await getBinancePayTransactions(BINANCE_API_KEY, BINANCE_SECRET_KEY);
@@ -370,7 +384,7 @@ Deno.serve(async (req) => {
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      verifyResult = verifyBinancePayTx(txResult.data!, transaction_id, expectedAmount, TIME_WINDOW_HOURS);
+      verifyResult = verifyBinancePayTx(txResult.data!, normalizedTransactionId, expectedAmount, TIME_WINDOW_HOURS);
     } else {
       const txResult = await getBep20Deposits(BINANCE_API_KEY, BINANCE_SECRET_KEY);
       if (!txResult.success) {
@@ -380,7 +394,7 @@ Deno.serve(async (req) => {
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      verifyResult = verifyBep20Tx(txResult.data!, transaction_id, expectedAmount, TIME_WINDOW_HOURS);
+      verifyResult = verifyBep20Tx(txResult.data!, normalizedTransactionId, expectedAmount, TIME_WINDOW_HOURS);
     }
 
     if (!verifyResult.success) {
@@ -399,7 +413,7 @@ Deno.serve(async (req) => {
       .from("orders")
       .update({
         status: "completed",
-        transaction_id: transaction_id,
+        transaction_id: normalizedTransactionId,
       })
       .eq("id", order_id);
 
@@ -414,7 +428,7 @@ Deno.serve(async (req) => {
         fields: [
           { name: "💰 Amount", value: `${expectedAmount} USDT`, inline: true },
           { name: "📋 Method", value: payment_type === "binance_pay" ? "Binance Pay" : "BEP20 (USDT)", inline: true },
-          { name: "🔑 Transaction ID", value: `\`${transaction_id}\``, inline: false },
+          { name: "🔑 Transaction ID", value: `\`${normalizedTransactionId}\``, inline: false },
           { name: "📦 Order ID", value: `\`${order_id}\``, inline: false },
         ],
         footer: { text: "CGX Payment System • Verified" },
