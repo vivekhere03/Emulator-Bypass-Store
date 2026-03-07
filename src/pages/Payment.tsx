@@ -170,15 +170,31 @@ const Payment = () => {
       if (error) {
         let errorMsg = "Verification failed";
         try {
-          if (error.context && typeof error.context === "object") {
-            const body = await (error.context as Response).json();
-            errorMsg = body?.error || errorMsg;
+          // FunctionsHttpError stores the Response in error.context
+          const ctx = (error as any).context;
+          if (ctx && ctx instanceof Response) {
+            // Clone first in case body was already read
+            const cloned = ctx.clone();
+            try {
+              const body = await cloned.json();
+              errorMsg = body?.error || body?.message || errorMsg;
+            } catch {
+              const text = await ctx.text();
+              if (text) errorMsg = text;
+            }
           } else if (error.message) {
-            errorMsg = error.message;
+            // Try parsing error.message as JSON (some versions embed it there)
+            try {
+              const parsed = JSON.parse(error.message);
+              errorMsg = parsed?.error || parsed?.message || error.message;
+            } catch {
+              errorMsg = error.message;
+            }
           }
         } catch {
           errorMsg = error.message || errorMsg;
         }
+        console.error("Verify Payment error details:", error);
         toast.error(errorMsg);
         setVerifying(false);
         return;
@@ -195,6 +211,7 @@ const Payment = () => {
         toast.error(data?.error || "Payment verification failed. Please check UTR/TxID and try again.");
       }
     } catch (err: any) {
+      console.error("Verify Payment exception:", err);
       toast.error((err as Error).message || "Verification request failed. Try again.");
     }
 
