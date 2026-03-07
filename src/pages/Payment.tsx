@@ -363,7 +363,7 @@ const Payment = () => {
                 <div className="flex flex-col items-center gap-3">
                   <div className="rounded-xl border border-border p-4 bg-white">
                     <QRCode
-                      value={`upi://pay?pa=bypas@ptyes&pn=CGX%20Store&am=${inrAmount}&tr=${order.id}&tn=Order%20${order.id}`}
+                      value={`upi://pay?pa=bypas@ptyes&pn=CGX%20Store&cu=INR&am=${Number(inrAmount).toFixed(2)}&tr=${order?.id?.replace(/-/g, '')}&tn=CGXOrder`}
                       size={180}
                       level="H"
                     />
