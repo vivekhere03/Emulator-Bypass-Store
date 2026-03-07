@@ -9,18 +9,23 @@ const corsHeaders = {
 const BYPASS_URL = "https://bypass.cgxhub.in";
 const SERVICE_KEY = Deno.env.get("BYPASS_SERVICE_KEY")!;
 
-// Dynamic credit pricing: duration_days -> credits required
-const CREDIT_PRICING: Record<number, number> = {
-  1: 1,
-  3: 2,
-  7: 5,
-  15: 8,
-  30: 15,
-  90: 30,
-};
+const SELLER_USER_DURATION_DAYS = 30;
+const DEFAULT_MONTHLY_CREDITS_REQUIRED = 15;
 
-function getCreditsForDuration(days: number): number | null {
-  return CREDIT_PRICING[days] ?? null;
+async function getMonthlyCreditsRequired(
+  adminClient: ReturnType<typeof createClient>,
+): Promise<number> {
+  const { data } = await adminClient
+    .from("site_settings")
+    .select("value")
+    .eq("key", "seller_user_monthly_credits")
+    .maybeSingle();
+
+  const parsed = Number.parseInt(data?.value ?? "", 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_MONTHLY_CREDITS_REQUIRED;
+  }
+  return parsed;
 }
 
 async function debitCreditsAtomic(
@@ -161,15 +166,15 @@ Deno.serve(async (req) => {
 
       case "add-user": {
         const { username, hwid, duration_days } = body;
-        const days = duration_days || 7;
-        const creditsNeeded = getCreditsForDuration(days);
-
-        if (creditsNeeded === null) {
-          return new Response(JSON.stringify({ error: `Invalid duration: ${days} days. Allowed: 1, 3, 7, 15, 30, 90.` }), {
+        const requestedDays = Number(duration_days ?? SELLER_USER_DURATION_DAYS);
+        if (requestedDays !== SELLER_USER_DURATION_DAYS) {
+          return new Response(JSON.stringify({ error: `Only ${SELLER_USER_DURATION_DAYS}-day duration is enabled.` }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+        const days = SELLER_USER_DURATION_DAYS;
+        const creditsNeeded = await getMonthlyCreditsRequired(adminClient);
 
         if (seller.credit_balance < creditsNeeded) {
           return new Response(JSON.stringify({ error: `Not enough credits. Need ${creditsNeeded}, have ${seller.credit_balance}.` }), {
@@ -237,15 +242,15 @@ Deno.serve(async (req) => {
 
       case "extend-user": {
         const { username, duration_days } = body;
-        const days = duration_days || 7;
-        const creditsNeeded = getCreditsForDuration(days);
-
-        if (creditsNeeded === null) {
-          return new Response(JSON.stringify({ error: `Invalid duration: ${days} days. Allowed: 1, 3, 7, 15, 30, 90.` }), {
+        const requestedDays = Number(duration_days ?? SELLER_USER_DURATION_DAYS);
+        if (requestedDays !== SELLER_USER_DURATION_DAYS) {
+          return new Response(JSON.stringify({ error: `Only ${SELLER_USER_DURATION_DAYS}-day duration is enabled.` }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+        const days = SELLER_USER_DURATION_DAYS;
+        const creditsNeeded = await getMonthlyCreditsRequired(adminClient);
 
         if (seller.credit_balance < creditsNeeded) {
           return new Response(JSON.stringify({ error: `Not enough credits. Need ${creditsNeeded}, have ${seller.credit_balance}.` }), {

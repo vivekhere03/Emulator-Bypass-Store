@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Settings, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,7 +30,7 @@ const AdminSettings = () => {
 
   const saveSettings = async () => {
     for (const [key, value] of Object.entries(settings)) {
-      await supabase.from("site_settings").update({ value }).eq("key", key);
+      await supabase.from("site_settings").upsert({ key, value }, { onConflict: "key" });
     }
     toast.success("Settings saved");
   };
@@ -70,6 +71,19 @@ const AdminSettings = () => {
                 checked={settings.binance_pay_enabled === "true"}
                 onCheckedChange={(checked) => updateSetting("binance_pay_enabled", String(checked))}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="seller-user-monthly-credits">Seller User Monthly Credits Required</Label>
+              <Input
+                id="seller-user-monthly-credits"
+                type="number"
+                min="1"
+                value={settings.seller_user_monthly_credits ?? "15"}
+                onChange={(e) => updateSetting("seller_user_monthly_credits", e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Credits deducted when a seller creates or extends a 1-month user.
+              </p>
             </div>
           </CardContent>
         </Card>

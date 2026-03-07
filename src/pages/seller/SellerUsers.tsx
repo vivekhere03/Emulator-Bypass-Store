@@ -23,16 +23,11 @@ interface ManagedUser {
 }
 
 const DURATION_OPTIONS = [
-  { value: "1", label: "1 Day", credits: 1 },
-  { value: "3", label: "3 Days", credits: 2 },
-  { value: "7", label: "7 Days", credits: 5 },
-  { value: "15", label: "15 Days", credits: 8 },
-  { value: "30", label: "1 Month", credits: 15 },
-  { value: "90", label: "3 Months", credits: 30 },
+  { value: "30", label: "1 Month" },
 ];
 
-function getCreditsForDays(days: string): number {
-  return DURATION_OPTIONS.find(o => o.value === days)?.credits ?? 5;
+function getCreditsForDays(days: string, monthlyCredits: number): number {
+  return days === "30" ? monthlyCredits : monthlyCredits;
 }
 
 function generateRandomSuffix(length = 5) {
@@ -49,6 +44,7 @@ const SellerUsers = () => {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("add");
+  const [monthlyCreditsRequired, setMonthlyCreditsRequired] = useState(15);
 
   // Add single user
   const [addUsername, setAddUsername] = useState("");
@@ -80,6 +76,16 @@ const SellerUsers = () => {
     setSeller(data);
   }, [user]);
 
+  const fetchCreditSetting = useCallback(async () => {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "seller_user_monthly_credits")
+      .maybeSingle();
+    const parsed = Number.parseInt(data?.value ?? "", 10);
+    setMonthlyCreditsRequired(Number.isFinite(parsed) && parsed > 0 ? parsed : 15);
+  }, []);
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -104,7 +110,8 @@ const SellerUsers = () => {
   useEffect(() => {
     fetchSeller();
     fetchUsers();
-  }, [fetchSeller, fetchUsers]);
+    fetchCreditSetting();
+  }, [fetchSeller, fetchUsers, fetchCreditSetting]);
 
   const callSellerApi = async (action: string, body: Record<string, unknown>) => {
     setActionLoading(true);
@@ -173,7 +180,7 @@ const SellerUsers = () => {
       }
       // Re-fetch seller to get updated balance
       await fetchSeller();
-      if ((seller?.credit_balance ?? 0) < getCreditsForDays(bulkDays)) break;
+      if ((seller?.credit_balance ?? 0) < getCreditsForDays(bulkDays, monthlyCreditsRequired)) break;
     }
 
     if (created.length > 0) {
@@ -295,13 +302,13 @@ const SellerUsers = () => {
                   <Select value={addDays} onValueChange={setAddDays}>
                     <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
+                      {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {monthlyCreditsRequired} credit{monthlyCreditsRequired > 1 ? "s" : ""}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">This will cost {getCreditsForDays(addDays)} credit{getCreditsForDays(addDays) > 1 ? "s" : ""}</p>
+                  <p className="text-xs text-muted-foreground">This will cost {getCreditsForDays(addDays, monthlyCreditsRequired)} credit{getCreditsForDays(addDays, monthlyCreditsRequired) > 1 ? "s" : ""}</p>
                 </div>
-                <Button onClick={handleAddUser} disabled={actionLoading || creditBalance < getCreditsForDays(addDays)}>
-                  {actionLoading ? "Adding..." : <><UserPlus className="mr-2 h-4 w-4" /> Add User ({getCreditsForDays(addDays)} credits)</>}
+                <Button onClick={handleAddUser} disabled={actionLoading || creditBalance < getCreditsForDays(addDays, monthlyCreditsRequired)}>
+                  {actionLoading ? "Adding..." : <><UserPlus className="mr-2 h-4 w-4" /> Add User ({getCreditsForDays(addDays, monthlyCreditsRequired)} credits)</>}
                 </Button>
               </CardContent>
             </Card>
@@ -331,13 +338,13 @@ const SellerUsers = () => {
                     <Select value={bulkDays} onValueChange={setBulkDays}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Total: {getCreditsForDays(bulkDays) * (parseInt(bulkCount) || 1)} credits</p>
+                      {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {monthlyCreditsRequired} credit{monthlyCreditsRequired > 1 ? "s" : ""}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                    <p className="text-xs text-muted-foreground">Total: {getCreditsForDays(bulkDays, monthlyCreditsRequired) * (parseInt(bulkCount) || 1)} credits</p>
                   </div>
                 </div>
-                <Button onClick={handleBulkAdd} disabled={actionLoading || creditBalance < getCreditsForDays(bulkDays)}>
+                <Button onClick={handleBulkAdd} disabled={actionLoading || creditBalance < getCreditsForDays(bulkDays, monthlyCreditsRequired)}>
                   {actionLoading ? "Creating..." : <><Users className="mr-2 h-4 w-4" /> Create {bulkCount} Users</>}
                 </Button>
 
@@ -441,12 +448,12 @@ const SellerUsers = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Extend"
-                              onClick={() => { setExtendDialogDays("7"); setExtendDialog({ open: true, username: u.username }); }}>
+                <Button variant="ghost" size="icon" className="h-7 w-7" title="Extend"
+                              onClick={() => { setExtendDialogDays("30"); setExtendDialog({ open: true, username: u.username }); }}>
                               <Clock className="h-3.5 w-3.5" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Reduce"
-                              onClick={() => { setReduceDialogDays("7"); setReduceDialog({ open: true, username: u.username }); }}>
+                              onClick={() => { setReduceDialogDays("30"); setReduceDialog({ open: true, username: u.username }); }}>
                               <MinusCircle className="h-3.5 w-3.5" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Reset HWID"
@@ -481,14 +488,14 @@ const SellerUsers = () => {
             <Select value={extendDialogDays} onValueChange={setExtendDialogDays}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {o.credits} credit{o.credits > 1 ? "s" : ""}</SelectItem>)}
+                {DURATION_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label} — {monthlyCreditsRequired} credit{monthlyCreditsRequired > 1 ? "s" : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExtendDialog({ open: false, username: "" })}>Cancel</Button>
-            <Button onClick={handleExtendFromTable} disabled={actionLoading || creditBalance < getCreditsForDays(extendDialogDays)}>
-              {actionLoading ? "Extending..." : `Extend (${getCreditsForDays(extendDialogDays)} credits)`}
+            <Button onClick={handleExtendFromTable} disabled={actionLoading || creditBalance < getCreditsForDays(extendDialogDays, monthlyCreditsRequired)}>
+              {actionLoading ? "Extending..." : `Extend (${getCreditsForDays(extendDialogDays, monthlyCreditsRequired)} credits)`}
             </Button>
           </DialogFooter>
         </DialogContent>
