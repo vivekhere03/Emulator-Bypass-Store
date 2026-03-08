@@ -285,7 +285,7 @@ const SellerApiKey = () => {
                     path: "/api/v3/users/reset-hwid",
                     desc: "Reset HWID",
                     cost: "Free",
-                    fields: "username (required), new_hwid (required)",
+                    fields: "username (required), new_hwid (optional, leave blank to auto-bind)",
                   },
                   {
                     method: "POST",
@@ -316,8 +316,8 @@ const SellerApiKey = () => {
                     <div className="flex items-center gap-2">
                       <span
                         className={`rounded px-1.5 py-0.5 text-xs font-bold ${ep.method === "GET"
-                            ? "bg-primary/10 text-primary"
-                            : "bg-accent/10 text-accent-foreground"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-accent/10 text-accent-foreground"
                           }`}
                       >
                         {ep.method}
