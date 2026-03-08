@@ -14,9 +14,10 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ProductDetail from "./pages/ProductDetail";
 import Payment from "./pages/Payment";
-import OrderSuccess from "./pages/OrderSuccess";
 import NotFound from "./pages/NotFound";
-
+import OrderSuccess from "./pages/OrderSuccess";
+import AnnouncementModal from "@/components/layout/AnnouncementModal";
+import { FloatingContact } from "@/components/layout/FloatingContact";
 
 // Seller dashboard
 import SellerOverview from "./pages/seller/SellerOverview";
@@ -82,6 +83,8 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <AnnouncementModal />
+          <FloatingContact />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

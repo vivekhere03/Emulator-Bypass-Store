@@ -30,6 +30,12 @@ const Navbar = () => {
             </Link>
           </Button>
 
+          <Button variant="ghost" size="sm" asChild>
+            <a href="https://t.me/bypassexe" target="_blank" rel="noopener noreferrer">
+              Contact Us
+            </a>
+          </Button>
+
           {user ? (
             <>
               <Button variant="ghost" size="sm" asChild>
@@ -84,6 +90,9 @@ const Navbar = () => {
         <div className="flex flex-col gap-1 border-t border-border/50 bg-card p-4 md:hidden">
           <Button variant="ghost" size="sm" asChild onClick={() => setMobileOpen(false)}>
             <Link to="/">Products</Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild onClick={() => setMobileOpen(false)}>
+            <a href="https://t.me/bypassexe" target="_blank" rel="noopener noreferrer">Contact Us</a>
           </Button>
           {user ? (
             <>
