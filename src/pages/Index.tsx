@@ -41,6 +41,7 @@ const BAN_RISKS = [
 const Index = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,6 +65,14 @@ const Index = () => {
         );
         setProducts(withDurations);
       }
+
+      const { data: pkgs } = await supabase
+        .from("credit_packages")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      setPackages(pkgs ?? []);
+
       setLoading(false);
     };
     fetchProducts();
@@ -207,6 +216,75 @@ const Index = () => {
                       </div>
                     </div>
                   </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Credit Packages Grid */}
+      <section id="resell" className="py-16 bg-secondary/20">
+        <div className="container mx-auto px-4">
+          <div className="mb-12 text-center">
+            <h2 className="mb-3 text-3xl font-bold">Reseller Credit Packages</h2>
+            <p className="text-muted-foreground">Buy credits to generate and manage keys for your own customers</p>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="glass-card animate-pulse rounded-xl p-6">
+                  <div className="mb-4 h-48 rounded-lg bg-secondary" />
+                  <div className="mb-2 h-6 w-2/3 rounded bg-secondary" />
+                  <div className="h-4 w-full rounded bg-secondary" />
+                </div>
+              ))}
+            </div>
+          ) : packages.length === 0 ? (
+            <div className="glass-card rounded-xl p-16 text-center">
+              <Coins className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-xl font-semibold">No Packages Available</h3>
+              <p className="text-muted-foreground">Check back soon for reseller packages.</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {packages.map((pkg, i) => (
+                <motion.div
+                  key={pkg.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                >
+                  <Card className="glass-card transition-all hover:glow-border h-full">
+                    <CardContent className="p-6 space-y-4 flex flex-col h-full">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                          <Zap className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{pkg.name}</h3>
+                          <p className="text-sm text-muted-foreground">{pkg.credits} credits</p>
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-3xl font-bold text-primary">${Number(pkg.price).toFixed(2)}</span>
+                        <span className="text-lg font-semibold text-green-400">
+                          ₹{pkg.price_inr ? Number(pkg.price_inr).toFixed(0) : Math.ceil(Number(pkg.price) * 90)}
+                        </span>
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-400">Binance</span>
+                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-400">UPI / GPay / PhonePe</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground flex-1">
+                        ${(Number(pkg.price) / pkg.credits).toFixed(2)} per credit
+                      </p>
+                      <Button className="w-full mt-auto" asChild>
+                        <Link to="/buy-credits">Purchase Credits</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ))}
             </div>
